@@ -136,14 +136,6 @@ def investigate_vessel(vessel: dict[str, Any], *, use_llm: bool = True) -> dict[
             {"name": "companies_at_port", "input": {"port_name": port.get("name")}, "output": cos},
         ]
         ops = ", ".join(c.get("name", "?") for c in cos) or "no illustrative operator on file"
-<<<<<<< Updated upstream
-        summary = (
-            f"{vessel.get('vessel_id')} went dark ~{port.get('distance_nm')} nm from {port.get('name')} "
-            f"({port.get('state')}). Nearest light: {light.get('name')} "
-            f"({light.get('distance_nm')} nm). Operators tied to that HQ port: {ops}."
-        )
-=======
-        
         is_flagged = vessel.get("max_gap_minutes", 0) > 0
         if is_flagged:
             summary = (
@@ -161,8 +153,6 @@ def investigate_vessel(vessel: dict[str, Any], *, use_llm: bool = True) -> dict[
                 f"Nearest port is {port.get('name')} ({port.get('state')}) at {port.get('distance_nm')} nm. "
                 f"(Deterministic lookup — set ANTHROPIC_API_KEY and enable LLM briefs for Claude.)"
             )
-
->>>>>>> Stashed changes
         return {"summary": summary, "tool_calls": tool_calls, "model": "local-lookup", "used_llm": False}
 
     from anthropic import Anthropic

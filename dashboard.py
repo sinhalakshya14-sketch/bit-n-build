@@ -335,7 +335,6 @@ def _apply_basemap(folium_map, choice: str) -> None:
         ).add_to(folium_map)
     elif "Dark" in choice:
         folium.TileLayer(
-<<<<<<< Updated upstream
             tiles="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
             attr="Esri World Dark Gray Canvas",
             name="Esri Dark Nautical Canvas",
@@ -347,11 +346,6 @@ def _apply_basemap(folium_map, choice: str) -> None:
             tiles="https://services.arcgisonline.com/arcgis/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}",
             attr="Esri Ocean Basemap",
             name="Esri Ocean Bathymetry",
-=======
-            tiles="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
-            attr="CartoDB Positron",
-            name="MarineTraffic Light Nautical",
->>>>>>> Stashed changes
             overlay=False,
             control=True,
         ).add_to(folium_map)
@@ -548,7 +542,6 @@ def _render_event_feed(state: dict) -> None:
         )
 
 
-<<<<<<< Updated upstream
 def _render_single_explain_card(fv: dict, analyst: str, watched_ids: set, state: dict, key_prefix: str = "") -> None:
     vid = fv["vessel_id"]
     on_watch = vid in watched_ids
@@ -665,22 +658,6 @@ def _render_flag_explain(state: dict) -> None:
             }
         _render_single_explain_card(fv, analyst, watched_ids, state, key_prefix="search_")
         st.markdown("<br/>", unsafe_allow_html=True)
-
-    with st.expander(" Add to watchlist — flagged vessels this tick", expanded=True):
-        flagged = state.get("flagged_vessels", [])
-        if not flagged:
-            st.success("No dark vessels flagged in current scan frame.")
-            return
-        st.markdown("#####  Flagged Dark Vessels — Anomaly Analysis")
-        shown = sorted(flagged, key=lambda r: r.get("confidence", 0), reverse=True)[:12]
-        for fv in shown:
-            _render_single_explain_card(fv, analyst, watched_ids, state, key_prefix="")
-            
-        if len(flagged) > 12:
-            st.caption(f"Showing top 12 of {len(flagged)} flagged vessels by confidence.")
-
-=======
->>>>>>> Stashed changes
 
 def _render_watchlist_panel(state: dict) -> None:
     analyst = _current_analyst()

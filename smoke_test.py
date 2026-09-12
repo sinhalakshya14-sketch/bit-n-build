@@ -83,6 +83,14 @@ if dv_results:
     ))
     from agents.dark_vessel import DARK_FRACTION, IF_CONTAMINATION
     check("Detector contamination prior != GT dark fraction", lambda: IF_CONTAMINATION != DARK_FRACTION)
+    n_fp = sum(1 for r in dv_results if r["flagged"] and not r["is_ground_truth_dark"])
+    n_fn = sum(1 for r in dv_results if (not r["flagged"]) and r["is_ground_truth_dark"])
+    check("Flagged set is not identical to ground truth (false positives exist)", lambda: n_fp > 0)
+    print(f"  Evaluation: FP={n_fp} FN={n_fn} (precision/recall can move; not a closed loop)")
+    strict = detect_dark_vessels(ais_df, gap_threshold_min=90, dr_threshold_km=20)
+    check("Live thresholds appear on detections", lambda: all(
+        r.get("flag_gap_threshold_min") == 90 and r.get("flag_dr_threshold_km") == 20 for r in strict
+    ))
 
 # ── 4. Debris agent ────────────────────────────────────────────────────────
 print("\n=== Agent 3: Debris Coordination ===")
@@ -100,24 +108,55 @@ if debris_state:
     check("At least 1 hotspot", lambda: len(hotspots) >= 1)
     check("ETA present in assignment", lambda: any(h.get("eta") for h in hotspots if h["collector_assigned"]))
 
-# ── 5. Orchestrator & Special Modes ─────────────────────────────────────────
-print("\n=== Orchestrator & Demo Modes ===")
+# ── 5. Investigator (local tools; LLM optional) ────────────────────────────
+from agents.investigator import investigate_vessel
+
+inv = check("investigator local tools", lambda: investigate_vessel(
+    {"vessel_id": "V0001", "last_known_position": [29.3, -94.8], "max_gap_minutes": 80, "displacement_error_km": 12, "confidence": 0.6},
+    use_llm=False,
+))
+if inv:
+    check("Investigator cites a port", lambda: "Port" in inv["summary"] or inv["tool_calls"][0]["name"] == "nearest_port")
+    check("Investigator exposes tool trace", lambda: len(inv["tool_calls"]) >= 2)
 
 import orchestrator
 
+print("\n=== Orchestrator & Demo Modes ===")
 check("initialise()", orchestrator.initialise)
 state = check("get_state()", orchestrator.get_state)
 
 if state:
     check("Event log non-empty", lambda: len(state["event_log"]) > 0)
     check("Wakes tracked", lambda: len(state["vessel_wakes"]) > 0)
-    check("Reroute fired at least once", lambda: state["metrics"]["reroute_count"] >= 1)
+    check("Causal cross-agent log present", lambda: any(
+        "in response to" in line for line in orchestrator.get_state()["event_log"]
+    ))
 
 # Test Hurricane Ida storm mode toggle
 check("toggle_storm_mode(True)", lambda: orchestrator.toggle_storm_mode(True))
 check("toggle_storm_mode(False)", lambda: orchestrator.toggle_storm_mode(False))
 check("tick()", orchestrator.tick)
+for _ in range(5):
+    orchestrator.tick()
+mem = orchestrator.get_state().get("vessel_memory") or {}
+flagged_mem = [r for r in mem.values() if r.get("flag_count", 0) >= 1]
+check("Vessel memory records flags", lambda: len(flagged_mem) >= 1)
+check(
+    "Repeat-flag suspicion can exceed scan score",
+    lambda: any(
+        r.get("cumulative_suspicion", 0) >= r.get("last_scan_confidence", 0)
+        and r.get("flag_count", 0) >= 1
+        for r in flagged_mem
+    ),
+)
 check("get_tick_history()", lambda: len(orchestrator.get_tick_history()) > 0)
+check("set_detection_thresholds stores live cutoffs", lambda: (
+    orchestrator.set_detection_thresholds(60.0, 12.0),
+    orchestrator.get_state()["detection_thresholds"]["gap_threshold_min"] == 60.0,
+)[-1])
+demo = check("guided_demo()", orchestrator.guided_demo)
+if demo:
+    check("Guided demo produced flag, assignment, and reroute", lambda: demo.get("ok") is True)
 
 # ── Summary ────────────────────────────────────────────────────────────────
 print("\n" + "=" * 60)

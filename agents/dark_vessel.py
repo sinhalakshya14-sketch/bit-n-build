@@ -215,21 +215,25 @@ def _run_isolation_forest(feat_df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
-def _rule_flag(row: pd.Series) -> tuple[bool, str]:
+def _rule_flag(
+    row: pd.Series,
+    gap_threshold_min: float = FLAG_GAP_MINUTES,
+    dr_threshold_km: float = FLAG_DR_ERROR_KM,
+) -> tuple[bool, str]:
     """IMO-style silence rule — independent of IsolationForest."""
-    if row["max_gap_minutes"] >= FLAG_GAP_MINUTES and row["displacement_error_km"] >= FLAG_DR_ERROR_KM:
+    if row["max_gap_minutes"] >= gap_threshold_min and row["displacement_error_km"] >= dr_threshold_km:
         return True, (
-            f"Rule: gap {row['max_gap_minutes']:.0f} min ≥ {FLAG_GAP_MINUTES:.0f} min "
-            f"(Class A underway normally reports within ~3 min; 45 min is used as a "
+            f"Rule: gap {row['max_gap_minutes']:.0f} min ≥ {gap_threshold_min:.0f} min "
+            f"(Class A underway normally reports within ~3 min; {gap_threshold_min:.0f} min is used as a "
             f"coastal-shadowing allowance) and reappearance is "
             f"{row['displacement_error_km']:.1f} km off dead-reckoning "
-            f"(threshold {FLAG_DR_ERROR_KM:.0f} km)."
+            f"(threshold {dr_threshold_km:.0f} km)."
         )
-    if row["max_gap_minutes"] >= FLAG_GAP_MINUTES:
+    if row["max_gap_minutes"] >= gap_threshold_min:
         return False, (
-            f"Gap {row['max_gap_minutes']:.0f} min exceeds {FLAG_GAP_MINUTES:.0f} min but "
+            f"Gap {row['max_gap_minutes']:.0f} min exceeds {gap_threshold_min:.0f} min but "
             f"reappearance is only {row['displacement_error_km']:.1f} km off DR "
-            f"(<{FLAG_DR_ERROR_KM:.0f} km) — consistent with a coverage hole, not a course change while dark."
+            f"(<{dr_threshold_km:.0f} km) — consistent with a coverage hole, not a course change while dark."
         )
     return False, ""
 
@@ -243,7 +247,13 @@ def _top_features(row: pd.Series, k: int = 3) -> list[tuple[str, float]]:
     return ranked[:k]
 
 
-def detect_dark_vessels(ais_df: pd.DataFrame) -> list[dict[str, Any]]:
+def detect_dark_vessels(
+    ais_df: pd.DataFrame,
+    gap_threshold_min: float | None = None,
+    dr_threshold_km: float | None = None,
+) -> list[dict[str, Any]]:
+    gap_th = FLAG_GAP_MINUTES if gap_threshold_min is None else float(gap_threshold_min)
+    dr_th = FLAG_DR_ERROR_KM if dr_threshold_km is None else float(dr_threshold_km)
     modified_df, dark_vessels, _benign = inject_ground_truth(ais_df)
     feat_df = _engineer_features(modified_df)
     feat_df = _run_isolation_forest(feat_df)
@@ -259,7 +269,7 @@ def detect_dark_vessels(ais_df: pd.DataFrame) -> list[dict[str, Any]]:
     for _, row in feat_df.iterrows():
         vid = row["vessel_id"]
         pos = last_pos.loc[vid] if vid in last_pos.index else None
-        rule_hit, rule_text = _rule_flag(row)
+        rule_hit, rule_text = _rule_flag(row, gap_th, dr_th)
         if_hit = bool(row["if_flagged"])
         flagged = if_hit or rule_hit
         reasons = []
@@ -309,8 +319,8 @@ def detect_dark_vessels(ais_df: pd.DataFrame) -> list[dict[str, Any]]:
                 "speed_change_after_gap": spd_chg,
                 "heading_change_after_gap": hdg_chg,
                 "feature_z": {name: round(z, 2) for name, z in top},
-                "flag_gap_threshold_min": FLAG_GAP_MINUTES,
-                "flag_dr_threshold_km": FLAG_DR_ERROR_KM,
+                "flag_gap_threshold_min": gap_th,
+                "flag_dr_threshold_km": dr_th,
                 "explanation": explanation,
                 "is_ground_truth_dark": vid in dark_vessels,
             }

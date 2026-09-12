@@ -168,23 +168,28 @@ def _build_hotspots(sightings_df: pd.DataFrame) -> list[dict[str, Any]]:
 #  Nearest-collector assignment                                               #
 # --------------------------------------------------------------------------- #
 def _assign_collectors(
-    hotspots: list[dict], collectors: list[dict]
+    hotspots: list[dict],
+    collectors: list[dict],
+    priority_hotspot_ids: set[str] | None = None,
 ) -> tuple[list[dict], list[dict]]:
     """
     Assign each hotspot to the nearest available collector.
-    Simple nearest-distance greedy assignment (no complex auction).
-    Updates hotspot and collector dicts in place, returns updated lists.
+    Hotspots listed in priority_hotspot_ids are assigned first (cross-agent
+    bump from nearby flagged dark vessels).
     """
     if not hotspots or not collectors:
         return hotspots, collectors
 
-    # Reset collector assignments
+    priority = set(priority_hotspot_ids or [])
+
     for c in collectors:
         c["assigned_hotspot"] = None
         c["status"] = "IDLE"
 
-    # Sort hotspots by sighting count (largest first → highest priority)
-    hotspots_sorted = sorted(hotspots, key=lambda h: -h["sighting_count"])
+    hotspots_sorted = sorted(
+        hotspots,
+        key=lambda h: (0 if h["hotspot_id"] in priority else 1, -h["sighting_count"]),
+    )
 
     available_collectors = list(collectors)  # shallow copy for tracking
 
@@ -228,6 +233,7 @@ def get_debris_state(
     collectors: list[dict[str, Any]],
     spawn_new: bool = True,
     n_new: int = 2,
+    priority_hotspot_ids: set[str] | None = None,
 ) -> tuple[list[dict], list[dict], pd.DataFrame]:
     """
     Full pipeline for one tick.
@@ -248,7 +254,9 @@ def get_debris_state(
 
     sightings_df = _cluster_sightings(sightings_df)
     hotspots = _build_hotspots(sightings_df)
-    hotspots, collectors = _assign_collectors(hotspots, collectors)
+    hotspots, collectors = _assign_collectors(
+        hotspots, collectors, priority_hotspot_ids=priority_hotspot_ids
+    )
 
     n_hs = len(hotspots)
     n_assigned = sum(1 for h in hotspots if h["collector_assigned"])

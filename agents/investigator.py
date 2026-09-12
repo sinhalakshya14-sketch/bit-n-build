@@ -132,10 +132,9 @@ def investigate_vessel(vessel: dict[str, Any], *, use_llm: bool = True) -> dict[
         f"dead-reckoning error {vessel.get('displacement_error_km')} km, "
         f"scan confidence {vessel.get('scan_confidence', vessel.get('confidence'))}. "
         "Use tools to find nearest port, nearest lighthouse, and any company at that port. "
-        f"Explicitly mention the confidence score ({vessel.get('scan_confidence', vessel.get('confidence', 0)):.1%}) in the summary text. "
+        "Explicitly mention the confidence score ({vessel.get('scan_confidence', vessel.get('confidence', 0)):.1%}) in the summary text. "
         "Write 3-5 sentences smoothly integrating the facts (include nm distances). "
-        "Do NOT explicitly write things like '(see nearest_port result)' or mention tool names in your text. "
-        "Just write the narrative naturally."
+        "CRITICAL INSTRUCTION: DO NOT mention any tool names (like 'nearest_port', 'nearest_lighthouse', etc) and DO NOT say 'According to the tool...'. Just state the facts directly as a human analyst."
     )
     messages: list[dict[str, Any]] = [{"role": "user", "content": user}]
     summary = ""

@@ -378,8 +378,8 @@ def _new_gulf_map(choice: str, center=GULF_CENTER, zoom=GULF_ZOOM):
     return fmap
 
 
-def add_route_layers(folium_map, route: dict | None, baseline_route=None, show_before_after: bool = True):
-    """Shared route overlay used by Live Map and Route Planner."""
+def add_route_layers(folium_map, route: dict | None, baseline_route=None, show_before_after: bool = True, candidate_routes: dict | None = None):
+    """Shared route overlay with Candidate A (Fuel-optimal), Candidate B (Risk-avoiding), and Candidate C (Balanced)."""
     if show_before_after and baseline_route:
         bl_wps = baseline_route.get("waypoints", []) if isinstance(baseline_route, dict) else baseline_route
         if bl_wps and len(bl_wps) >= 2:
@@ -388,22 +388,65 @@ def add_route_layers(folium_map, route: dict | None, baseline_route=None, show_b
                 color="#ef4444",
                 weight=3,
                 dash_array="8, 8",
-                opacity=0.8,
-                popup="Naive Straight-Line Baseline Route",
+                opacity=0.75,
+                popup="Naive Baseline Corridor (Unoptimized straight path)",
             ).add_to(folium_map)
-    route = route or {}
-    waypoints = route.get("waypoints", [])
-    if len(waypoints) >= 2:
+
+    cand_dict = candidate_routes or {}
+    cand_a = cand_dict.get("candidate_a")
+    cand_b = cand_dict.get("candidate_b")
+    cand_c = cand_dict.get("candidate_c")
+    chosen_id = cand_dict.get("chosen_id", (route or {}).get("chosen_candidate", "A"))
+
+    if cand_a and cand_b:
+        is_a_chosen = (chosen_id == "A")
+        is_b_chosen = (chosen_id == "B")
+        is_c_chosen = (chosen_id == "C")
+
+        # Candidate A (Fuel-optimal)
         folium.PolyLine(
-            locations=[[wp[0], wp[1]] for wp in waypoints],
+            locations=[[wp[0], wp[1]] for wp in cand_a["waypoints"]],
             color="#38bdf8",
-            weight=5,
-            opacity=0.95,
-            popup=(
-                f"Optimized A* Route (Cost: {route.get('cost', 0):.1f}, "
-                f"Savings: {route.get('savings_pct', 0):.1f}%)"
-            ),
+            weight=5 if is_a_chosen else 3,
+            dash_array=None if is_a_chosen else "6, 6",
+            opacity=0.95 if is_a_chosen else 0.70,
+            popup=f"Candidate A (Fuel-Optimal): Cost {cand_a['cost']:.1f}, Fuel Saved {cand_a['savings_pct']:.1f}%" + (" [CHOSEN ROUTE]" if is_a_chosen else " [EVALUATED]"),
         ).add_to(folium_map)
+
+        # Candidate C (Balanced)
+        if cand_c:
+            folium.PolyLine(
+                locations=[[wp[0], wp[1]] for wp in cand_c["waypoints"]],
+                color="#f59e0b",
+                weight=5 if is_c_chosen else 3,
+                dash_array=None if is_c_chosen else "6, 6",
+                opacity=0.95 if is_c_chosen else 0.70,
+                popup=f"Candidate C (Balanced): Cost {cand_c['cost']:.1f}, Fuel Saved {cand_c['savings_pct']:.1f}%" + (" [CHOSEN ROUTE]" if is_c_chosen else " [EVALUATED]"),
+            ).add_to(folium_map)
+
+        # Candidate B (Risk-avoiding)
+        folium.PolyLine(
+            locations=[[wp[0], wp[1]] for wp in cand_b["waypoints"]],
+            color="#10b981",
+            weight=5 if is_b_chosen else 3,
+            dash_array=None if is_b_chosen else "6, 6",
+            opacity=0.95 if is_b_chosen else 0.70,
+            popup=f"Candidate B (Risk-Avoidance): Cost {cand_b['cost']:.1f}, Fuel Saved {cand_b['savings_pct']:.1f}%" + (" [CHOSEN ROUTE]" if is_b_chosen else " [EVALUATED]"),
+        ).add_to(folium_map)
+    else:
+        route = route or {}
+        waypoints = route.get("waypoints", [])
+        if len(waypoints) >= 2:
+            folium.PolyLine(
+                locations=[[wp[0], wp[1]] for wp in waypoints],
+                color="#38bdf8",
+                weight=5,
+                opacity=0.95,
+                popup=(
+                    f"Optimized A* Route (Cost: {route.get('cost', 0):.1f}, "
+                    f"Savings: {route.get('savings_pct', 0):.1f}%)"
+                ),
+            ).add_to(folium_map)
     return folium_map
 
 
@@ -414,13 +457,33 @@ def _request_live_tick() -> None:
     st.rerun("live_tick_map")
 
 
+def _generate_codename() -> str:
+    """Generate a memorable anonymous codename: Adjective-Noun-NN."""
+    import random
+    _ADJ = [
+        "Silent", "Quiet", "Swift", "Bold", "Steady", "Iron",
+        "Deep", "Calm", "Bright", "Lone", "Keen", "Dusk",
+    ]
+    _NOUN = [
+        "Compass", "Harbor", "Anchor", "Beacon", "Horizon", "Rudder",
+        "Current", "Vessel", "Tide", "Helm", "Reef", "Stern",
+    ]
+    adj = random.choice(_ADJ)
+    noun = random.choice(_NOUN)
+    num = random.randint(10, 99)
+    return f"{adj}-{noun}-{num}"
+
+
 def _sync_analyst_name() -> None:
     """Copy the fragment-owned name widget onto a non-widget key."""
-    st.session_state["_analyst_name"] = (
+    entered = (
         st.session_state.get("analyst_name_frag")
         or st.session_state.get("analyst_name")
         or ""
     ).strip()
+    if entered:
+        st.session_state["_analyst_name"] = entered
+    # If nothing was typed, keep whatever auto-generated codename is already set
 
 
 def _current_analyst() -> str:
@@ -432,6 +495,17 @@ def _current_analyst() -> str:
     ).strip()
 
 
+def _ensure_codename() -> str:
+    """Auto-generate a codename on first visit if one doesn't exist."""
+    current = _current_analyst()
+    if not current:
+        codename = _generate_codename()
+        st.session_state["_analyst_name"] = codename
+        st.session_state["_codename_is_new"] = True
+        return codename
+    return current
+
+
 def _watchlist_add(vid: str) -> None:
     storage.add_to_watchlist(_current_analyst(), vid)
 
@@ -441,26 +515,51 @@ def _watchlist_remove(vid: str) -> None:
 
 
 def _render_analyst_watchlist_bar() -> None:
-    """Name + hint sit in the fragment body (under the map), not an outside container.
+    """Anonymous codename identity + resume flow (replaces free-text name entry)."""
+    codename = _ensure_codename()
+    is_new = st.session_state.get("_codename_is_new", False)
 
-    A new widget key is required so Streamlit treats Enter as a fragment rerun;
-    the old `analyst_name` key was owned by the main script and rebuilt the tables.
-    """
     st.markdown(
-        '<div class="section-heading"> Analyst watchlist<span class="tag">press Enter to commit</span></div>',
+        '<div class="section-heading">\U0001f575\ufe0f Anonymous Analyst Identity</div>',
         unsafe_allow_html=True,
     )
-    st.text_input(
-        "Your name",
-        key="analyst_name_frag",
-        placeholder="e.g. Jordan Chen",
-        on_change=_sync_analyst_name,
+
+    # ── Display current codename prominently ──
+    status_label = "🆕 New session — save this codename!" if is_new else "✅ Active session"
+    st.markdown(
+        f"""
+        <div style="background:rgba(14,165,233,0.12);border:1.5px solid rgba(56,189,248,0.35);
+                    border-radius:8px;padding:12px 14px;margin:6px 0 10px 0;">
+          <div style="font-size:0.78rem;color:#94a3b8;margin-bottom:4px;">{status_label}</div>
+          <div style="font-size:1.2rem;font-weight:800;color:#38bdf8;letter-spacing:0.02em;
+                      font-family:'JetBrains Mono',monospace;">{codename}</div>
+          <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;">
+            This is your anonymous ID — save it to access your watchlist again later.
+            No real name is collected or stored.
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
-    _sync_analyst_name()
-    if not _current_analyst():
-        st.info("Type your name and press Enter — your watchlist and  Add buttons appear right here, under the map.")
-    else:
-        st.success(f"Signed in as {_current_analyst()}. Star flagged vessels in the expander below.")
+
+    # Copy-friendly display
+    st.code(codename, language=None)
+
+    # ── Resume flow for returning analysts ──
+    with st.expander("🔑 Returning? Enter your codename", expanded=False):
+        def _on_resume_codename():
+            entered = st.session_state.get("resume_codename_input", "").strip()
+            if entered:
+                st.session_state["_analyst_name"] = entered
+                st.session_state["_codename_is_new"] = False
+        st.text_input(
+            "Paste your codename",
+            key="resume_codename_input",
+            placeholder="e.g. Silent-Compass-42",
+            on_change=_on_resume_codename,
+        )
+
+    st.success(f"Signed in as **{codename}**. Star flagged vessels in the expander below.")
 
 
 def _render_header(state: dict) -> None:
@@ -471,6 +570,7 @@ def _render_header(state: dict) -> None:
             <div class="mas-icon"></div>
             <div>
               <h1>MaritimeMAS — Global Fleet Operations</h1>
+              <p style="font-weight: bold; color: #38bdf8;">Primary User: Fleet Dispatcher</p>
               <p>Live AIS density · NOAA weather · IsolationForest dark-vessel scan</p>
             </div>
           </div>
@@ -515,8 +615,90 @@ def _render_kpi_strip(state: dict) -> None:
     )
 
 
+def _render_reasoning_trace(state: dict) -> None:
+    st.markdown('<div class="section-heading">🧠 Live Tradeoff Reasoning Trace</div>', unsafe_allow_html=True)
+    trace = state.get("reasoning_trace", [])
+    if not trace:
+        st.info("Orchestrator tradeoff engine initializing deliberation...")
+        return
+
+    st.markdown("""
+        <style>
+        .reasoning-trace-box {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 0.82rem;
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%);
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            border-radius: 8px;
+            padding: 10px 12px;
+            max-height: 250px;
+            overflow-y: auto;
+            margin-bottom: 14px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+        .trace-row {
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+            display: flex;
+            align-items: flex-start;
+            line-height: 1.35;
+        }
+        .trace-row:last-child {
+            border-bottom: none;
+        }
+        .trace-badge {
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-right: 8px;
+            white-space: nowrap;
+            display: inline-block;
+        }
+        .badge-surveillance { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); }
+        .badge-route { background: rgba(56, 189, 248, 0.2); color: #7dd3fc; border: 1px solid rgba(56, 189, 248, 0.4); }
+        .badge-debris { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.4); }
+        .badge-orchestrator { background: rgba(168, 85, 247, 0.25); color: #d8b4fe; border: 1px solid rgba(168, 85, 247, 0.5); font-weight: 800; }
+        .badge-feedback { background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.4); }
+        .trace-text {
+            color: #cbd5e1;
+            flex-grow: 1;
+        }
+        .trace-text.decision {
+            color: #f8fafc;
+            font-weight: 600;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    badge_classes = {
+        "Surveillance Agent": "badge-surveillance",
+        "Route Planner": "badge-route",
+        "Debris Agent": "badge-debris",
+        "Orchestrator": "badge-orchestrator",
+        "Feedback Loop": "badge-feedback",
+    }
+
+    rows_html = '<div class="reasoning-trace-box">'
+    for item in trace:
+        agent = item.get("agent", "Agent")
+        icon = item.get("icon", "🔹")
+        text = item.get("text", "")
+        item_type = item.get("type", "")
+        b_cls = badge_classes.get(agent, "badge-route")
+        is_dec = "decision" if item_type == "decision" else ""
+        rows_html += (
+            f'<div class="trace-row">'
+            f'<span class="trace-badge {b_cls}">{icon} {agent}</span>'
+            f'<span class="trace-text {is_dec}">{text}</span>'
+            f'</div>'
+        )
+    rows_html += '</div>'
+    st.markdown(rows_html, unsafe_allow_html=True)
+
+
 def _render_event_feed(state: dict) -> None:
-    st.markdown('<div class="section-heading"> Real-Time Event Feed</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-heading">⚡ System Event Stream</div>', unsafe_allow_html=True)
     event_log = state.get("event_log", [])
     if not event_log:
         st.info("System initializing...")
@@ -530,16 +712,47 @@ def _render_event_feed(state: dict) -> None:
             grouped.append({"ev": ev, "msg": msg_body, "count": 1})
         if len(grouped) >= 15:
             break
+
+    # Custom CSS for the trace
+    st.markdown("""
+        <style>
+        .agent-trace {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.85rem;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            max-height: 250px;
+            overflow-y: auto;
+            margin-bottom: 12px;
+        }
+        .agent-trace-msg {
+            margin-bottom: 6px;
+            color: #94a3b8;
+        }
+        .agent-trace-msg.crit { color: #f87171; font-weight: bold; }
+        .agent-trace-msg.warn { color: #fbbf24; }
+        .agent-trace-sender { color: #38bdf8; font-weight: bold; }
+        </style>
+        <div class="agent-trace">
+    """, unsafe_allow_html=True)
+
+    trace_html = ""
     for g in grouped:
         ev = g["ev"]
-        is_warn = "" in ev or "Rerouted" in ev or "flagged" in ev.lower()
+        is_warn = "->" in ev or "flagged" in ev.lower()
         is_crit = "Hurricane" in ev or "ALERT" in ev or "WATCHLIST RE-ALERT" in ev
         cls = "crit" if is_crit else ("warn" if is_warn else "")
         count_badge = f'<span class="event-count">×{g["count"]}</span>' if g["count"] > 1 else ""
-        st.markdown(
-            f'<div class="event-item {cls}"><span>{ev}</span>{count_badge}</div>',
-            unsafe_allow_html=True,
-        )
+
+        # Colorize [Agent] tags
+        import re
+        ev_colored = re.sub(r'(\[.*?\])', r'<span class="agent-trace-sender">\1</span>', ev)
+
+        trace_html += f'<div class="agent-trace-msg {cls}">{ev_colored} {count_badge}</div>'
+
+    st.markdown(trace_html + "</div>", unsafe_allow_html=True)
 
 
 def _render_single_explain_card(fv: dict, analyst: str, watched_ids: set, state: dict, key_prefix: str = "") -> None:
@@ -626,11 +839,8 @@ def _render_single_explain_card(fv: dict, analyst: str, watched_ids: set, state:
                 brief = b
                 break
     if brief:
-        with st.expander(f"Investigator trace — {vid}", expanded=True):
+        with st.expander(f"Investigator Brief — {vid}", expanded=True):
             st.caption(f"Model: {brief.get('model')} · LLM={brief.get('used_llm')}")
-            for call in brief.get("tool_calls") or []:
-                st.markdown(f"**Tool:** `{call.get('name')}`")
-                st.json({"input": call.get("input"), "output": call.get("output")})
             st.markdown(brief.get("summary") or "")
     else:
         if st.button(" Generate investigative brief for this vessel", key=f"{key_prefix}gen_brief_{vid}"):
@@ -763,6 +973,13 @@ def _build_live_folium_map(state: dict, choice: str):
                 center = (v["lat"], v["lon"])
                 zoom = 10
                 break
+    elif state.get("active_route_origin") and state.get("active_route_destination"):
+        o = state["active_route_origin"]
+        d = state["active_route_destination"]
+        # If outside the Gulf box, center on route midpoint with global zoom
+        if not (24 <= o[0] <= 32 and -98 <= o[1] <= -80 and 24 <= d[0] <= 32 and -98 <= d[1] <= -80):
+            center = ((o[0] + d[0]) / 2.0, (o[1] + d[1]) / 2.0)
+            zoom = 3
 
     folium_map = _new_gulf_map(choice, center=center, zoom=zoom)
 
@@ -814,6 +1031,7 @@ def _build_live_folium_map(state: dict, choice: str):
         state.get("current_route"),
         state.get("baseline_route"),
         show_before_after=st.session_state.show_before_after,
+        candidate_routes=state.get("candidate_routes"),
     )
 
     # ── Real Oceanic Marine Debris Accumulation Zones (NOAA MDMAP & Ocean Gyres) ──
@@ -1013,15 +1231,18 @@ def _build_live_folium_map(state: dict, choice: str):
             ),
         ).add_to(folium_map)
 
-    origin, dest = _static_anchor_ports()
+    origin = state.get("active_route_origin", orchestrator.ROUTE_ORIGIN)
+    dest = state.get("active_route_destination", orchestrator.ROUTE_DESTINATION)
+    orig_label = state.get("active_origin_name", "Route Origin")
+    dest_label = state.get("active_dest_name", "Route Destination")
     folium.Marker(
         location=list(origin),
-        popup="<b>Galveston Entrance Channel Port</b><br/>Route Origin (29.30°N, 94.75°W)",
+        popup=f"<b>{orig_label}</b><br/>Route Origin ({origin[0]:.2f}°, {origin[1]:.2f}°)",
         icon=folium.Icon(color="green", icon="anchor", prefix="fa"),
     ).add_to(folium_map)
     folium.Marker(
         location=list(dest),
-        popup="<b>Mississippi River South Pass Approach</b><br/>Route Destination (29.10°N, 89.50°W)",
+        popup=f"<b>{dest_label}</b><br/>Route Destination ({dest[0]:.2f}°, {dest[1]:.2f}°)",
         icon=folium.Icon(color="blue", icon="flag", prefix="fa"),
     ).add_to(folium_map)
     return folium_map
@@ -1040,6 +1261,8 @@ def _live_map_cache_key(state: dict, choice: str) -> tuple:
         bool(st.session_state.get("show_debris_zones", True)),
         bool(state.get("storm_mode_active")),
         st.session_state.get("active_search_vessel"),
+        state.get("active_origin_name"),
+        state.get("active_dest_name"),
     )
 
 
@@ -1108,7 +1331,7 @@ def _live_ops_panel(header_slot, kpi_slot, map_feed_slot=None, explain_slot=None
         _render_kpi_strip(live)
     if map_feed_slot is not None:
         with map_feed_slot:
-            map_col, feed_col = st.columns([3.2, 1.3])
+            map_col = st.container()
             with map_col:
                 st.markdown('<div class="section-heading"> Live Operations Map</div>', unsafe_allow_html=True)
                 
@@ -1171,7 +1394,7 @@ def _live_ops_panel(header_slot, kpi_slot, map_feed_slot=None, explain_slot=None
                             else:
                                 st.button("⭐ Add to Watchlist", key=f"wl_add_inline_{active_search}", on_click=_watchlist_add, args=(active_search,))
                         else:
-                            st.info("Enter your Analyst Name below to use the Watchlist.")
+                            st.info("Save your codename below to use the Watchlist.")
                         
                         st.markdown("<br/>", unsafe_allow_html=True)
                 
@@ -1236,21 +1459,331 @@ def _live_ops_panel(header_slot, kpi_slot, map_feed_slot=None, explain_slot=None
                                 """,
                                 unsafe_allow_html=True,
                             )
+                            
+                            # ── Task 2: Per-vessel route re-optimization check ──
+                            REOPT_IMPROVEMENT_THRESHOLD_PCT = 2.0  # named constant — tune as needed
+                            
+                            if st.button("🔄 Check for optimized route", key=f"reopt_check_{active_search}"):
+                                with st.spinner("Computing fresh route with current weather…"):
+                                    fresh_route = get_route(
+                                        (v["lat"], v["lon"]),  # current position as origin
+                                        v_dest,
+                                        live.get("weather_df"),  # fresh weather, not cached
+                                    )
+                                    st.session_state["reopt_candidate"] = {
+                                        "vessel_id": active_search,
+                                        "current_cost": opt_cost,
+                                        "new_cost": fresh_route.get("cost", 0),
+                                        "new_route": fresh_route,
+                                        "improvement_pct": ((opt_cost - fresh_route.get("cost", 0)) / opt_cost * 100) if opt_cost > 0 else 0,
+                                    }
+                            
+                            # Render comparison popup if one exists for this vessel
+                            reopt = st.session_state.get("reopt_candidate")
+                            if reopt and reopt.get("vessel_id") == active_search:
+                                imp = reopt["improvement_pct"]
+                                if imp < REOPT_IMPROVEMENT_THRESHOLD_PCT:
+                                    st.success(f"✅ Current route for **{active_search}** is already optimized. No change needed (improvement would be only {imp:.1f}%).")
+                                    if st.button("Dismiss", key="reopt_dismiss_ok"):
+                                        st.session_state.pop("reopt_candidate", None)
+                                        st.rerun()
+                                else:
+                                    st.warning(f"🔀 A better route exists for **{active_search}**!")
+                                    rc1, rc2, rc3 = st.columns(3)
+                                    rc1.metric("Current cost", f"{reopt['current_cost']:.1f}")
+                                    rc2.metric("New cost", f"{reopt['new_cost']:.1f}")
+                                    rc3.metric("Improvement", f"{imp:.1f}%")
+                                    
+                                    ac1, ac2, _ = st.columns([1.5, 1.5, 3])
+                                    with ac1:
+                                        if st.button("✅ Apply new route", key="reopt_apply"):
+                                            # Update the cached route for this vessel
+                                            st.session_state[f"route_{active_search}"] = reopt["new_route"]
+                                            # Clear the map cache so it re-renders
+                                            _LIVE_FOLIUM_CACHE.clear()
+                                            orchestrator.append_event(
+                                                f"[Dispatcher] -> [Route Planner]: Re-optimized route for {active_search} — {imp:.1f}% improvement applied"
+                                            )
+                                            st.session_state.pop("reopt_candidate", None)
+                                            st.toast(f"Route for {active_search} updated!")
+                                            st.rerun()
+                                    with ac2:
+                                        if st.button("❌ Keep current route", key="reopt_keep"):
+                                            orchestrator.append_event(
+                                                f"[Dispatcher] -> [Orchestrator]: Declined re-optimization for {active_search}"
+                                            )
+                                            st.session_state.pop("reopt_candidate", None)
+                                            st.rerun()
+
                 elif route:
                     bl_cost = route.get("baseline_cost", 0)
                     opt_cost = route.get("cost", 0)
                     sav = route.get("savings_pct", 0)
+                    decision = live.get("tradeoff_decision") or {}
+                    candidates = live.get("candidate_routes") or {}
+                    cand_a = candidates.get("candidate_a") or {}
+                    cand_b = candidates.get("candidate_b") or {}
+                    cand_c = candidates.get("candidate_c") or {}
+                    chosen_id = decision.get("chosen_candidate", "A")
+                    risk_thresh = live.get("risk_threshold", 5.0)
+
+                    # ── Origin / Destination Port Selector (Part 1A, 1B) ──
+                    port_catalog = orchestrator.PORT_CATALOG
+                    port_names = [p["name"] for p in port_catalog]
+                    active_orig_name = decision.get("origin_name") or live.get("active_origin_name", "Houston / Galveston (US)")
+                    active_dest_name = decision.get("dest_name") or live.get("active_dest_name", "New Orleans / South Pass (US)")
+
+                    orig_idx = port_names.index(active_orig_name) if active_orig_name in port_names else 0
+                    dest_idx = port_names.index(active_dest_name) if active_dest_name in port_names else 1
+
+                    st.markdown("<div style='margin-top:14px;'></div>", unsafe_allow_html=True)
+                    st.markdown("##### ⚓ Port-to-Port Commercial Route Planner")
+
+                    sel_c1, sel_c2, sel_c3 = st.columns([2.2, 2.2, 1.2])
+                    with sel_c1:
+                        def _on_origin_select_change():
+                            o = st.session_state.get("sel_port_origin")
+                            d = st.session_state.get("sel_port_dest")
+                            if o and d:
+                                orchestrator.set_active_route_ports(o, d)
+                                _LIVE_FOLIUM_CACHE.clear()
+                        sel_orig = st.selectbox("Origin Port", port_names, index=orig_idx, key="sel_port_origin", on_change=_on_origin_select_change)
+                    with sel_c2:
+                        def _on_dest_select_change():
+                            o = st.session_state.get("sel_port_origin")
+                            d = st.session_state.get("sel_port_dest")
+                            if o and d:
+                                orchestrator.set_active_route_ports(o, d)
+                                _LIVE_FOLIUM_CACHE.clear()
+                        sel_dest = st.selectbox("Destination Port", port_names, index=dest_idx, key="sel_port_dest", on_change=_on_dest_select_change)
+                    with sel_c3:
+                        st.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
+                        def _do_replan_ports():
+                            o = st.session_state.get("sel_port_origin", active_orig_name)
+                            d = st.session_state.get("sel_port_dest", active_dest_name)
+                            orchestrator.set_active_route_ports(o, d)
+                            _LIVE_FOLIUM_CACHE.clear()
+                            st.rerun()
+                        st.button("🔄 Plan Route", key="btn_plan_selected_corridor", on_click=_do_replan_ports, use_container_width=True)
+
+                    # ── Who's Actually Traveling This Route (Part 1D) ──
+                    assigned = decision.get("assigned_vessel")
+                    if assigned:
+                        v_id = assigned.get("vessel_id", "Unknown")
+                        v_type = assigned.get("vessel_type", "CARGO")
+                        v_dist = assigned.get("dist_km", 0.0)
+                        v_speed = assigned.get("speed", 0.0)
+                        vessel_header_html = f"""
+                        <div style="background: rgba(14, 165, 233, 0.14); border-left: 4px solid #38bdf8; border-radius: 6px; padding: 10px 14px; margin: 10px 0 12px 0; display: flex; justify-content: space-between; align-items: center;">
+                          <div>
+                            <span style="font-size: 1.15rem; margin-right: 8px;">🚢</span>
+                            <span style="font-weight: 700; color: #38bdf8; font-size: 0.95rem;">Vessel {v_id} ({v_type}, currently near {sel_orig} — {v_dist:.1f} km away)</span>
+                            <span style="color: #cbd5e1; font-size: 0.9rem;"> — planning route to <b>{sel_dest}</b></span>
+                            <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 2px;">
+                              Current Speed: {v_speed:.1f} kts &nbsp;·&nbsp; Telemetry: Active Normal AIS Tracking &nbsp;·&nbsp; Sector Scan: Clear
+                            </div>
+                          </div>
+                          <span style="background: #0284c7; color: #ffffff; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; white-space: nowrap;">ASSIGNED ACTIVE FLEET</span>
+                        </div>
+                        """
+                    else:
+                        vessel_header_html = f"""
+                        <div style="background: rgba(100, 116, 139, 0.15); border-left: 4px solid #94a3b8; border-radius: 6px; padding: 10px 14px; margin: 10px 0 12px 0; display: flex; justify-content: space-between; align-items: center;">
+                          <div>
+                            <span style="font-size: 1.15rem; margin-right: 8px;">📍</span>
+                            <span style="color: #cbd5e1; font-size: 0.9rem; font-style: italic;">No active vessel currently near this origin — showing corridor planning only.</span>
+                            <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 2px;">
+                              Nearest non-flagged fleet unit is &gt; 300 km from origin. Corridor benchmark generated for route feasibility assessment.
+                            </div>
+                          </div>
+                          <span style="background: rgba(255,255,255,0.1); color: #94a3b8; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; white-space: nowrap;">CORRIDOR ONLY</span>
+                        </div>
+                        """
+                    st.markdown(vessel_header_html, unsafe_allow_html=True)
+
                     st.markdown(
                         f"""
-                        <div class="route-bar">
-                          <div> <b>Reference Corridor (Demo):</b> Houston/Galveston (29.3°N, 94.8°W) &nbsp;➔&nbsp; New Orleans (29.9°N, 90.1°W)</div>
-                          <div><b>Naive:</b> <span style="color:#f87171">{bl_cost:.1f}</span> &nbsp;·&nbsp; <b>Optimized:</b> <span style="color:#38bdf8">{opt_cost:.1f}</span> &nbsp;·&nbsp; <b>Fuel saved:</b> <span style="color:#34d399;font-weight:700">{sav:.1f}%</span></div>
+                        <div class="route-bar" style="flex-direction:column;align-items:stretch;">
+                          <div style="font-size:0.85rem;margin-bottom:4px;"> <b>Managed Commercial Corridor:</b> {sel_orig} ➔ {sel_dest}</div>
+                          <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:0.8rem;">
+                            <span><b>Naive Baseline:</b> <span style="color:#f87171">{bl_cost:.1f}</span></span>
+                            <span><b>Selected Route ({chosen_id}):</b> <span style="color:#38bdf8">{opt_cost:.1f}</span></span>
+                            <span><b>Fuel Saved:</b> <span style="color:#34d399;font-weight:700">{sav:.1f}%</span></span>
+                            <span><b>Risk Threshold:</b> <span style="color:#fbbf24;font-weight:700">{risk_thresh:.1f}%</span></span>
+                          </div>
                         </div>
                         """,
                         unsafe_allow_html=True,
                     )
-            with feed_col:
-                _render_event_feed(live)
+
+                    # ── Multi-Agent Candidate Tradeoff Matrix (Part 1C, 1E: 3 Candidate Paths) ──
+                    st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+                    tc1, tc2, tc3 = st.columns(3)
+                    with tc1:
+                        is_a_sel = (chosen_id == "A")
+                        border_color_a = "#38bdf8" if is_a_sel else "rgba(255,255,255,0.1)"
+                        badge_a = '<span style="background:#0284c7;color:#fff;padding:2px 6px;border-radius:4px;font-size:0.75rem;font-weight:700">ACTIVE RECOMMENDATION</span>' if is_a_sel else '<span style="background:rgba(255,255,255,0.1);color:#94a3b8;padding:2px 6px;border-radius:4px;font-size:0.75rem">ALTERNATIVE</span>'
+                        st.markdown(
+                            f"""
+                            <div style="background:rgba(15,23,42,0.8);border:1.5px solid {border_color_a};border-radius:8px;padding:10px 12px;height:100%;">
+                              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                                <span style="font-weight:700;color:#38bdf8;font-size:0.88rem;">Candidate A (Fuel-Optimal)</span>
+                                {badge_a}
+                              </div>
+                              <div style="font-size:0.83rem;color:#cbd5e1;line-height:1.45;">
+                                <b>Fuel Cost:</b> {cand_a.get('cost', opt_cost):.1f} &nbsp;·&nbsp; <b>Saved:</b> <span style="color:#34d399;font-weight:700">{cand_a.get('savings_pct', sav):.1f}%</span><br/>
+                                <b>Est. Transit:</b> {cand_a.get('transit_hours', 18.2)} hrs ({cand_a.get('distance_km', 460)} km)<br/>
+                                <b>Route Objective:</b> Direct transit via optimal sea conditions
+                              </div>
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+                    with tc2:
+                        is_c_sel = (chosen_id == "C")
+                        border_color_c = "#f59e0b" if is_c_sel else "rgba(255,255,255,0.1)"
+                        badge_c = '<span style="background:#d97706;color:#fff;padding:2px 6px;border-radius:4px;font-size:0.75rem;font-weight:700">ACTIVE RECOMMENDATION</span>' if is_c_sel else '<span style="background:rgba(255,255,255,0.1);color:#94a3b8;padding:2px 6px;border-radius:4px;font-size:0.75rem">ALTERNATIVE</span>'
+                        pen_c = cand_c.get("fuel_penalty_pct", 0.0)
+                        st.markdown(
+                            f"""
+                            <div style="background:rgba(15,23,42,0.8);border:1.5px solid {border_color_c};border-radius:8px;padding:10px 12px;height:100%;">
+                              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                                <span style="font-weight:700;color:#f59e0b;font-size:0.88rem;">Path C (Balanced)</span>
+                                {badge_c}
+                              </div>
+                              <div style="font-size:0.83rem;color:#cbd5e1;line-height:1.45;">
+                                <b>Fuel Cost:</b> {cand_c.get('cost', opt_cost):.1f} &nbsp;·&nbsp; <b>Variance:</b> <span style="color:{'#f59e0b' if pen_c > 0 else '#94a3b8'}">+{pen_c:.1f}% vs A</span><br/>
+                                <b>Est. Transit:</b> {cand_c.get('transit_hours', 18.3)} hrs ({cand_c.get('distance_km', 465)} km)<br/>
+                                <b>Route Objective:</b> Blended clearance buffer & fuel balance
+                              </div>
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+                    with tc3:
+                        is_b_sel = (chosen_id == "B")
+                        border_color_b = "#10b981" if is_b_sel else "rgba(255,255,255,0.1)"
+                        badge_b = '<span style="background:#059669;color:#fff;padding:2px 6px;border-radius:4px;font-size:0.75rem;font-weight:700">ACTIVE RECOMMENDATION</span>' if is_b_sel else '<span style="background:rgba(255,255,255,0.1);color:#94a3b8;padding:2px 6px;border-radius:4px;font-size:0.75rem">ALTERNATIVE</span>'
+                        pen_b = cand_b.get("fuel_penalty_pct", 0.0)
+                        st.markdown(
+                            f"""
+                            <div style="background:rgba(15,23,42,0.8);border:1.5px solid {border_color_b};border-radius:8px;padding:10px 12px;height:100%;">
+                              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                                <span style="font-weight:700;color:#10b981;font-size:0.88rem;">Candidate B (Risk-Avoidance)</span>
+                                {badge_b}
+                              </div>
+                              <div style="font-size:0.83rem;color:#cbd5e1;line-height:1.45;">
+                                <b>Fuel Cost:</b> {cand_b.get('cost', opt_cost):.1f} &nbsp;·&nbsp; <b>Variance:</b> <span style="color:{'#fbbf24' if pen_b > 0 else '#94a3b8'}">+{pen_b:.1f}% vs A</span><br/>
+                                <b>Est. Transit:</b> {cand_b.get('transit_hours', 18.5)} hrs ({cand_b.get('distance_km', 475)} km)<br/>
+                                <b>Route Objective:</b> Full detour around flagged hazard zones
+                              </div>
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+
+                    # ── Orchestrator Decision Callout ──
+                    st.markdown("<div style='margin-top:12px;'></div>", unsafe_allow_html=True)
+                    st.markdown("##### 🤖 Orchestrator Tradeoff Recommendation")
+                    rec_reason = decision.get("reason", f"Use Optimized Corridor (Fuel saved: {sav:.1f}%)")
+                    st.info(f"**Recommendation:** **{decision.get('chosen_name', 'Candidate ' + chosen_id)}** — {rec_reason}")
+
+                    if decision.get("debris_bonus"):
+                        db = decision["debris_bonus"]
+                        st.caption(f"🌊 **Opportunistic Debris Proximity:** Corridor passes within **{db['dist_km']} km** of Debris Hotspot **{db['hotspot_id']}** (Collector **{db['collector']}** on station).")
+
+                    if decision.get("feedback_applied"):
+                        st.warning(f"🔄 **Adaptive Dispatcher Feedback Applied:** Risk threshold adjusted from 5.0% to {risk_thresh:.1f}% based on recent dispatcher overrides.")
+
+                    # ── Condensed Multi-Agent Decision Trace (collapsed by default) ──
+                    trace = live.get("reasoning_trace") or []
+                    if trace:
+                        with st.expander("🔎 Show full multi-agent reasoning trace", expanded=False):
+                            trace_rows_html = """
+                            <div style="background:rgba(15,23,42,0.85);border:1.5px solid rgba(56,189,248,0.25);border-radius:8px;padding:12px 14px;margin-top:4px;margin-bottom:6px;">
+                              <div style="font-size:0.84rem;font-weight:700;color:#38bdf8;margin-bottom:8px;display:flex;align-items:center;">
+                                <span style="margin-right:6px;">🧠</span> Multi-Agent Decision &amp; Tradeoff Sequence
+                              </div>
+                              <div style="font-size:0.82rem;color:#cbd5e1;line-height:1.6;">
+                            """
+                            for item in trace:
+                                ag = item.get("agent", "Agent")
+                                ic = item.get("icon", "•")
+                                tx = item.get("text", "")
+                                if ag == "Surveillance Agent":
+                                    ag_color = "#fca5a5"
+                                elif ag == "Route Planner":
+                                    ag_color = "#7dd3fc"
+                                elif ag == "Debris Agent":
+                                    ag_color = "#6ee7b7"
+                                elif ag == "Orchestrator":
+                                    ag_color = "#d8b4fe"
+                                elif ag == "Feedback Loop":
+                                    ag_color = "#fcd34d"
+                                else:
+                                    ag_color = "#e2e8f0"
+                                trace_rows_html += f'<div style="margin-bottom:3px;">{ic} <span style="font-weight:700;color:{ag_color};">[{ag}]</span> {tx}</div>'
+                            trace_rows_html += "</div></div>"
+                            st.markdown(trace_rows_html, unsafe_allow_html=True)
+
+                    # ── Working Approve / Override Controls ──
+                    route_status = st.session_state.get("route_decision_status")
+
+                    if route_status == "approved":
+                        st.success("✅ **Route Approved** — Corridor confirmed by dispatcher. Logged to fleet operations memory.")
+                        if st.button("↩ Reset decision", key="reset_route_decision"):
+                            st.session_state.pop("route_decision_status", None)
+                            st.session_state.pop("route_override_reason_text", None)
+                            st.rerun()
+                    elif route_status == "overridden":
+                        override_reason = st.session_state.get("route_override_reason_text", "No reason given")
+                        st.error(f"⛔ **Route Overridden** — Dispatcher overridden recommendation. Reason: _{override_reason}_")
+                        if st.button("↩ Reset decision", key="reset_route_decision"):
+                            st.session_state.pop("route_decision_status", None)
+                            st.session_state.pop("route_override_reason_text", None)
+                            st.rerun()
+                    else:
+                        c1, c2, _ = st.columns([1.5, 1.5, 3])
+                        with c1:
+                            def _approve_route():
+                                st.session_state["route_decision_status"] = "approved"
+                                storage.log_route_decision(f"tick_{live.get('tick', 0)}", "approved", "Dispatcher approved recommendation", risk_thresh)
+                                orchestrator.append_event(f"[Dispatcher] -> [Orchestrator]: Approved {decision.get('chosen_name', 'route')} (savings: {sav:.1f}%)")
+                            st.button("✅ Approve", key="btn_approve_route", on_click=_approve_route, use_container_width=True)
+                        with c2:
+                            def _toggle_override():
+                                st.session_state["show_override_panel"] = not st.session_state.get("show_override_panel", False)
+                            st.button("❌ Override", key="btn_override_route", on_click=_toggle_override, use_container_width=True)
+
+                        if st.session_state.get("show_override_panel"):
+                            st.markdown("---")
+                            st.markdown("**Select a reason for override (feeds into adaptive risk threshold):**")
+                            override_reasons = [
+                                "The route is too costly for current fuel budget",
+                                "Preferred corridor has better port access",
+                                "Dispatcher has local weather intel not in model",
+                                "Vessel crew requested alternate heading",
+                            ]
+                            selected_reason = st.session_state.get("selected_override_reason", "")
+                            for i, r in enumerate(override_reasons):
+                                btn_type = "primary" if selected_reason == r else "secondary"
+                                def _select_reason(reason=r):
+                                    st.session_state["selected_override_reason"] = reason
+                                st.button(r, key=f"reason_btn_{i}", on_click=_select_reason, type=btn_type, use_container_width=True)
+
+                            custom = st.text_input("Or enter a custom reason:", key="custom_override_input")
+
+                            def _submit_override():
+                                reason_text = st.session_state.get("selected_override_reason", "") or st.session_state.get("custom_override_input", "The route is too costly")
+                                st.session_state["route_decision_status"] = "overridden"
+                                st.session_state["route_override_reason_text"] = reason_text
+                                st.session_state["show_override_panel"] = False
+                                st.session_state.pop("selected_override_reason", None)
+                                storage.log_route_decision(f"tick_{live.get('tick', 0)}", "overridden", reason_text, risk_thresh)
+                                orchestrator.append_event(f"[Dispatcher] -> [Orchestrator]: OVERRIDE — {reason_text}")
+                                orchestrator._run_route_tradeoff("dispatcher override")
+
+                            st.button("📤 Submit Override", key="btn_submit_override", on_click=_submit_override, type="primary", use_container_width=True)
     elif map_feed_slot is None:
         _hide_parked_live_map()
     if explain_slot is not None:
@@ -1760,13 +2293,13 @@ if nav == NAV_LIVE:
 
     st.markdown("---")
 
-    st.markdown('<div class="section-heading">📋 Operations data<span class="tag">live tables</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-heading">📋 Operations data<span class="tag">live tables · Fleet Dispatcher</span></div>', unsafe_allow_html=True)
 
     _tick = state["tick"]
 
     tab_vessels, tab_flagged, tab_hotspots, tab_collectors = st.tabs(
 
-        ["Vessels", "Flagged Vessels", "Debris Hotspots", "Collectors"]
+        ["Vessels", "Flagged Vessels [SIMULATED DATA]", "Debris Hotspots [SIMULATED DATA]", "Collectors"]
 
     )
 

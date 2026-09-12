@@ -33,16 +33,105 @@ import logging
 from typing import Any
 
 from data.loader import load_all, DATA_STATUS, load_debris_zones
-from agents.route import get_route, _snap_to_grid
+from agents.route import get_route, get_candidate_routes, _snap_to_grid, _haversine
 from agents.dark_vessel import detect_dark_vessels
 from agents import debris as debris_agent
 from agents.investigator import investigate_vessel
+from storage import log_zone_flag, get_zone_rolling_stats, log_route_decision, get_recent_override_count
 
 logger = logging.getLogger(__name__)
 
 # Route under management: Galveston Entrance → Mississippi River South Pass
-ROUTE_ORIGIN = (29.30, -94.80)
-ROUTE_DESTINATION = (29.90, -90.10)
+ROUTE_ORIGIN = (29.30, -94.75)
+ROUTE_DESTINATION = (29.10, -89.50)
+
+DEFAULT_RISK_AVOIDANCE_THRESHOLD_PCT = 5.0
+
+# Hardcoded catalog of real ports covering active vessel simulation lanes
+PORT_CATALOG = [
+    {"name": "Houston / Galveston (US)", "lat": 29.30, "lon": -94.75, "region": "Gulf of Mexico"},
+    {"name": "New Orleans / South Pass (US)", "lat": 29.10, "lon": -89.50, "region": "Gulf of Mexico"},
+    {"name": "Corpus Christi (US)", "lat": 27.80, "lon": -97.20, "region": "Gulf of Mexico"},
+    {"name": "Mobile (US)", "lat": 30.65, "lon": -88.05, "region": "Gulf of Mexico"},
+    {"name": "Tampa (US)", "lat": 27.95, "lon": -82.55, "region": "Gulf of Mexico"},
+    {"name": "Panama Canal (PA)", "lat": 8.90, "lon": -79.50, "region": "Central America"},
+    {"name": "Gibraltar (GI)", "lat": 36.14, "lon": -5.35, "region": "Mediterranean"},
+    {"name": "Port Said / Suez (EG)", "lat": 31.26, "lon": 32.30, "region": "Mediterranean / Red Sea"},
+    {"name": "Singapore (SG)", "lat": 1.29, "lon": 103.85, "region": "Southeast Asia"},
+    {"name": "Rotterdam (NL)", "lat": 51.92, "lon": 4.48, "region": "North Sea"},
+    {"name": "Cape Town (ZA)", "lat": -33.92, "lon": 18.42, "region": "South Africa"},
+    {"name": "Honolulu (US)", "lat": 21.30, "lon": -157.85, "region": "Pacific (Remote / No Fleet)"},
+]
+
+
+def find_nearest_active_vessel(lat: float, lon: float, max_dist_km: float = 300.0) -> dict | None:
+    """
+    Find the closest active (non-flagged) vessel within max_dist_km of (lat, lon).
+    Returns vessel dict or None if no active vessel is within threshold.
+    """
+    vessels = _state.get("vessel_positions", [])
+    best = None
+    min_dist = float("inf")
+    for v in vessels:
+        if v.get("flagged", False):
+            continue
+        vlat, vlon = v.get("lat"), v.get("lon")
+        if vlat is None or vlon is None:
+            continue
+        d = _haversine(lat, lon, vlat, vlon)
+        if d < min_dist:
+            min_dist = d
+            best = {
+                "vessel_id": v.get("vessel_id", "Unknown"),
+                "vessel_type": v.get("vessel_type", "CARGO"),
+                "speed": v.get("speed", 0.0),
+                "heading": v.get("heading", 0.0),
+                "lat": vlat,
+                "lon": vlon,
+                "dist_km": round(min_dist, 1),
+            }
+    if best and best["dist_km"] <= max_dist_km:
+        return best
+    return None
+
+
+def set_active_route_ports(origin_name: str, dest_name: str) -> None:
+    """Set active commercial corridor ports and re-run route tradeoff."""
+    port_map = {p["name"]: p for p in PORT_CATALOG}
+    orig_p = port_map.get(origin_name, PORT_CATALOG[0])
+    dest_p = port_map.get(dest_name, PORT_CATALOG[1])
+    _state["active_origin_name"] = orig_p["name"]
+    _state["active_dest_name"] = dest_p["name"]
+    _state["active_route_origin"] = (orig_p["lat"], orig_p["lon"])
+    _state["active_route_destination"] = (dest_p["lat"], dest_p["lon"])
+    _run_route_tradeoff(f"port change: {orig_p['name']} -> {dest_p['name']}")
+
+
+GULF_ZONES = [
+    {"id": "Zone 1", "name": "Texas Inshore / Galveston Shelf", "lat_min": 28.5, "lat_max": 30.5, "lon_min": -96.5, "lon_max": -94.0},
+    {"id": "Zone 2", "name": "Louisiana Coastal Shelf", "lat_min": 28.5, "lat_max": 30.5, "lon_min": -94.0, "lon_max": -91.5},
+    {"id": "Zone 3", "name": "Mississippi Delta / South Pass", "lat_min": 28.5, "lat_max": 30.5, "lon_min": -91.5, "lon_max": -89.0},
+    {"id": "Zone 4", "name": "Mobile Bay & Florida Panhandle", "lat_min": 28.5, "lat_max": 30.5, "lon_min": -89.0, "lon_max": -86.5},
+    {"id": "Zone 5", "name": "South Texas Deepwater", "lat_min": 26.5, "lat_max": 28.5, "lon_min": -96.5, "lon_max": -94.0},
+    {"id": "Zone 6", "name": "Central Gulf Deepwater", "lat_min": 26.5, "lat_max": 28.5, "lon_min": -94.0, "lon_max": -91.5},
+    {"id": "Zone 7", "name": "Mississippi Canyon", "lat_min": 26.5, "lat_max": 28.5, "lon_min": -91.5, "lon_max": -89.0},
+    {"id": "Zone 8", "name": "DeSoto Canyon / East Gulf", "lat_min": 26.5, "lat_max": 28.5, "lon_min": -89.0, "lon_max": -86.5},
+]
+
+def get_zone_for_point(lat: float, lon: float) -> dict[str, Any]:
+    for z in GULF_ZONES:
+        if z["lat_min"] <= lat <= z["lat_max"] and z["lon_min"] <= lon <= z["lon_max"]:
+            return z
+    best = GULF_ZONES[0]
+    best_dist = float("inf")
+    for z in GULF_ZONES:
+        clat = (z["lat_min"] + z["lat_max"]) / 2.0
+        clon = (z["lon_min"] + z["lon_max"]) / 2.0
+        d = (lat - clat) ** 2 + (lon - clon) ** 2
+        if d < best_dist:
+            best_dist = d
+            best = z
+    return best
 
 HISTORY_LIMIT = 120      # snapshots kept for the timeline scrubber
 EVENT_LOG_LIMIT = 200    # event feed entries kept
@@ -138,7 +227,7 @@ def _run_dark_vessel_scan() -> None:
     m["vessels_flagged"] = len(flagged)
     m["precision"] = tp / (tp + fp) if (tp + fp) else 0.0
     m["recall"] = tp / (tp + fn) if (tp + fn) else 0.0
-    _log(f"🚨 Dark vessel scan: {len(flagged)} flagged (P {m['precision']:.0%} / R {m['recall']:.0%})")
+    _log(f"[Surveillance Agent] -> [Orchestrator]: Flagged {len(flagged)} dark vessels in latest scan (P {m['precision']:.0%} / R {m['recall']:.0%})")
     _update_vessel_memory(_state.get("tick", 0))
     _maybe_investigate_flagged()
 
@@ -226,7 +315,7 @@ def _maybe_investigate_flagged() -> None:
             continue
         briefs[key] = investigate_vessel(det, use_llm=True)
         det["investigation"] = briefs[key]
-        _log(f"🕵️ Investigator briefed {det['vessel_id']} ({briefs[key].get('model')})")
+        _log(f"[Investigator Agent] -> [Orchestrator]: Completed background brief for V{det['vessel_id']} ({briefs[key].get('model')})")
     if len(briefs) > 40:
         for old in list(briefs.keys())[:-30]:
             briefs.pop(old, None)
@@ -293,7 +382,7 @@ def generate_single_brief(vid: str) -> None:
     if key not in briefs:
         briefs[key] = investigate_vessel(det, use_llm=True)
         det["investigation"] = briefs[key]
-        _log(f"🕵️ Investigator briefed single vessel {det['vessel_id']} ({briefs[key].get('model')})")
+        _log(f"[Investigator Agent] -> [Orchestrator]: Completed on-demand brief for V{det['vessel_id']} ({briefs[key].get('model')})")
 
 
 def set_detection_thresholds(gap_threshold_min: float, dr_threshold_km: float) -> None:
@@ -359,37 +448,292 @@ def _dark_near_hotspots(
     return pairs
 
 
-def _update_route(reason: str) -> bool:
-    """Cross-agent reroute: recompute Agent 1's path with hazard cost nodes."""
-    if not _state.get("current_route"):
+def _run_route_tradeoff(
+    reason: str = "scheduled",
+    origin: tuple[float, float] | None = None,
+    destination: tuple[float, float] | None = None,
+) -> bool:
+    """
+    Multi-Agent Tradeoff Engine (Phases 1 & 2):
+    1. Surveillance Agent: Maps flagged dark vessels to maritime zones, logs to SQLite, computes rolling risk.
+    2. Route Planner Agent: Generates Candidate A (fuel-optimal), Candidate B (zone-avoiding), and Candidate C (balanced).
+    3. Debris Agent: Evaluates opportunistic proximity to hotspots with assigned collectors.
+    4. Feedback Loop: Dynamically adjusts risk-avoidance threshold from dispatcher overrides in SQLite.
+    5. Orchestrator: Synthesizes N candidate options into exactly one recommended decision with live reasoning trace.
+    """
+    if _state.get("weather_df") is None:
         return False
-    near = _flagged_near_route(_state["current_route"]["waypoints"])
-    extra = sorted({h["node"] for h in near}) + _storm_cost_nodes()
-    if not extra:
-        return False
-    new_route = get_route(
-        ROUTE_ORIGIN, ROUTE_DESTINATION, _state["weather_df"], extra_cost_nodes=extra
+
+    t = int(_state.get("tick") or 0)
+
+    origin = origin or _state.get("active_route_origin", ROUTE_ORIGIN)
+    destination = destination or _state.get("active_route_destination", ROUTE_DESTINATION)
+    orig_name = _state.get("active_origin_name", "Houston / Galveston (US)")
+    dest_name = _state.get("active_dest_name", "New Orleans / South Pass (US)")
+
+    # ── 1. Surveillance Agent: Aggregate dark vessel events by Maritime Zone ──
+    flagged = _state.get("flagged_vessels") or []
+    zone_flag_counts: dict[str, int] = {}
+    for fv in flagged:
+        lat, lon = fv["last_known_position"]
+        z = get_zone_for_point(lat, lon)
+        zid = z["id"]
+        zone_flag_counts[zid] = zone_flag_counts.get(zid, 0) + 1
+
+    for zid, count in zone_flag_counts.items():
+        zname = next((z["name"] for z in GULF_ZONES if z["id"] == zid), zid)
+        try:
+            log_zone_flag(zid, zname, t, count)
+        except Exception as e:
+            logger.debug(f"Failed to log zone flag: {e}")
+
+    try:
+        zone_stats = get_zone_rolling_stats(window_ticks=30, current_tick=t)
+    except Exception:
+        zone_stats = {}
+
+    # ── 2. Hazard footprint near corridor ──
+    curr_wps = (_state.get("current_route") or {}).get("waypoints", [])
+    near = _flagged_near_route(curr_wps) if curr_wps else []
+    PORT_APPROACH_KM = 35.0
+    mid_route_hits = [
+        h for h in near
+        if _haversine(h["node"][0], h["node"][1], origin[0], origin[1]) > PORT_APPROACH_KM
+        and _haversine(h["node"][0], h["node"][1], destination[0], destination[1]) > PORT_APPROACH_KM
+    ]
+    mid_route_hits.sort(key=lambda h: h["det"].get("confidence", 0), reverse=True)
+    extra_nodes = sorted({h["node"] for h in mid_route_hits[:3]}) + _storm_cost_nodes()
+
+    # ── 3. Route Planner Agent: 3 Candidate Routes ──
+    candidates = get_candidate_routes(
+        origin,
+        destination,
+        _state["weather_df"],
+        extra_cost_nodes=extra_nodes,
+        extra_cost_factor=2.5,
     )
-    if new_route["waypoints"] != _state["current_route"]["waypoints"]:
-        _state["current_route"] = new_route
-        if new_route.get("naive_waypoints"):
-            _state["baseline_route"] = {"waypoints": new_route["naive_waypoints"]}
-        _state["metrics"]["fuel_savings_pct"] = new_route["savings_pct"]
-        _state["metrics"]["reroute_count"] += 1
-        vids = ", ".join(h["det"]["vessel_id"] for h in near[:4]) or "storm-eye nodes"
-        if near:
-            _log(
-                f"🔗 Route Agent recalculated the Galveston→NOLA corridor in response to "
-                f"Dark Vessel Agent flagging {vids} within {FLAGGED_RADIUS_KM:.0f} km of the managed route "
-                f"({reason}; savings {new_route['savings_pct']}%)"
+    cand_a = candidates["candidate_a"]
+    cand_b = candidates["candidate_b"]
+    cand_c = candidates["candidate_c"]
+    fuel_diff_b = candidates.get("fuel_diff_pct", 0.0)
+    fuel_diff_c = candidates.get("fuel_diff_c_pct", 0.0)
+
+    # Check which zones Candidate A intersects
+    crossed_zones_a = []
+    seen_zones_a = set()
+    for wp in cand_a["waypoints"]:
+        z = get_zone_for_point(wp[0], wp[1])
+        if z["id"] not in seen_zones_a:
+            seen_zones_a.add(z["id"])
+            flags_here = zone_flag_counts.get(z["id"], 0)
+            hist_count = zone_stats.get(z["id"], {}).get("count", 0)
+            if flags_here > 0 or hist_count > 0:
+                z_data = dict(z)
+                z_data["flag_count"] = flags_here or hist_count
+                z_data["risk_label"] = zone_stats.get(z["id"], {}).get("risk_label", "moderate")
+                crossed_zones_a.append(z_data)
+
+    a_hits = _flagged_near_route(cand_a["waypoints"])
+    has_active_corridor_risk = bool(a_hits or crossed_zones_a or extra_nodes)
+
+    # ── 4. Adaptive Feedback Loop: Check dispatcher overrides (Phase 2C) ──
+    recent_overrides = 0
+    try:
+        recent_overrides = get_recent_override_count(limit=10)
+    except Exception:
+        recent_overrides = 0
+
+    base_threshold = DEFAULT_RISK_AVOIDANCE_THRESHOLD_PCT
+    feedback_note = None
+    if recent_overrides >= 3:
+        threshold = 7.0
+        feedback_note = f"Risk-avoidance threshold adjusted from 5.0% to 7.0% based on {recent_overrides} recent dispatcher overrides."
+    else:
+        threshold = base_threshold
+
+    _state["risk_threshold"] = threshold
+
+    # ── 5. Orchestrator Selection Rule (Generalized to N Paths) ──
+    if has_active_corridor_risk and extra_nodes and (cand_b["waypoints"] != cand_a["waypoints"]):
+        if fuel_diff_b <= threshold:
+            chosen = cand_b
+            chosen_id = "B"
+            decision_reason = (
+                f"risk avoidance justifies +{fuel_diff_b:.1f}% fuel cost (threshold: {threshold:.1f}%)"
+            )
+        elif fuel_diff_c <= threshold and (cand_c["waypoints"] != cand_a["waypoints"]):
+            chosen = cand_c
+            chosen_id = "C"
+            decision_reason = (
+                f"full avoidance (+{fuel_diff_b:.1f}%) exceeds threshold ({threshold:.1f}%); "
+                f"selected Candidate C (Balanced) providing partial safety buffer at +{fuel_diff_c:.1f}% within budget"
             )
         else:
-            _log(
-                f"🔗 Route Agent recalculated the Galveston→NOLA corridor in response to "
-                f"storm-eye cost nodes ({reason}; savings {new_route['savings_pct']}%)"
+            chosen = cand_a
+            chosen_id = "A"
+            decision_reason = (
+                f"risk avoidance fuel penalty (+{fuel_diff_b:.1f}%) exceeds threshold ({threshold:.1f}%); "
+                f"selecting fuel-efficient Candidate A with surveillance advisory"
             )
-        return True
-    return False
+    else:
+        chosen = cand_a
+        chosen_id = "A"
+        decision_reason = (
+            f"no critical risk on primary corridor; selected Candidate A for optimal fuel efficiency ({cand_a['savings_pct']:.1f}% savings)"
+        )
+
+    # ── 6. Debris Agent: Opportunistic proximity to active collector hotspots ──
+    hotspots = _state.get("debris_hotspots") or []
+    debris_bonus = None
+    for hs in hotspots:
+        if not hs.get("collector_assigned"):
+            continue
+        c = hs.get("center") or [0, 0]
+        min_d = min((_haversine(wp[0], wp[1], c[0], c[1]) for wp in chosen["waypoints"]), default=999.0)
+        if min_d <= 45.0:
+            debris_bonus = {
+                "hotspot_id": hs["hotspot_id"],
+                "collector": hs["collector_assigned"],
+                "dist_km": round(min_d, 1),
+            }
+            break
+
+    if debris_bonus:
+        decision_reason += f", plus opportunistic debris proximity ({debris_bonus['dist_km']}km from {debris_bonus['hotspot_id']})"
+
+    # Look up nearest active vessel to origin port (Part 1D)
+    assigned_vessel = find_nearest_active_vessel(origin[0], origin[1], max_dist_km=300.0)
+
+    # ── 7. Live Condensed Reasoning Trace (Phase 1C & Part 2) ──
+    trace = []
+    # Surveillance Agent trace line
+    if crossed_zones_a:
+        for z in crossed_zones_a[:2]:
+            trace.append({
+                "agent": "Surveillance Agent",
+                "icon": "🛰️",
+                "text": f"{z['id']} ({z['name']}) flagged ({z['flag_count']} dark-vessel events, risk: {z['risk_label']})",
+                "type": "warning" if z["risk_label"] == "elevated" else "info",
+            })
+    elif flagged:
+        top_z = get_zone_for_point(flagged[0]["last_known_position"][0], flagged[0]["last_known_position"][1])
+        cnt = zone_flag_counts.get(top_z["id"], 1)
+        rlabel = zone_stats.get(top_z["id"], {}).get("risk_label", "moderate")
+        trace.append({
+            "agent": "Surveillance Agent",
+            "icon": "🛰️",
+            "text": f"{top_z['id']} ({top_z['name']}) flagged ({cnt} dark-vessel events, risk: {rlabel})",
+            "type": "warning" if rlabel == "elevated" else "info",
+        })
+    else:
+        trace.append({
+            "agent": "Surveillance Agent",
+            "icon": "🛰️",
+            "text": "All maritime patrol sectors clear; 0 dark vessel incursions detected on primary corridor.",
+            "type": "info",
+        })
+
+    # Route Planner trace lines
+    trace.append({
+        "agent": "Route Planner",
+        "icon": "🧭",
+        "text": f"Generated 3 candidate routes: Candidate A ({cand_a['savings_pct']:.1f}% fuel saved), Candidate C (+{fuel_diff_c:.1f}% fuel, balanced), Candidate B (+{fuel_diff_b:.1f}% fuel, zone-avoidance).",
+        "type": "info",
+    })
+
+    # Debris Agent trace line
+    if debris_bonus:
+        trace.append({
+            "agent": "Debris Agent",
+            "icon": "🌊",
+            "text": f"Candidate {chosen_id} passes within {debris_bonus['dist_km']}km of Hotspot {debris_bonus['hotspot_id']} (collector {debris_bonus['collector']} assigned)",
+            "type": "success",
+        })
+    else:
+        trace.append({
+            "agent": "Debris Agent",
+            "icon": "🌊",
+            "text": "Debris Agent: No active collector hotspots intersecting transit corridor.",
+            "type": "info",
+        })
+
+    # Orchestrator Decision trace line
+    trace.append({
+        "agent": "Orchestrator",
+        "icon": "🤖",
+        "text": f"Selecting Candidate {chosen_id} — {decision_reason}",
+        "type": "decision",
+    })
+
+    # Feedback Loop trace line if threshold was modified
+    if feedback_note:
+        trace.append({
+            "agent": "Feedback Loop",
+            "icon": "🔄",
+            "text": feedback_note,
+            "type": "feedback",
+        })
+
+    decision_payload = {
+        "chosen_candidate": chosen_id,
+        "chosen_name": chosen["name"],
+        "cost": chosen["cost"],
+        "savings_pct": chosen["savings_pct"],
+        "fuel_diff_pct": fuel_diff_b,
+        "fuel_diff_c_pct": fuel_diff_c,
+        "threshold_used": threshold,
+        "has_risk_avoidance": (chosen_id in ["B", "C"] and has_active_corridor_risk),
+        "debris_bonus": debris_bonus,
+        "reason": decision_reason,
+        "feedback_applied": bool(feedback_note),
+        "assigned_vessel": assigned_vessel,
+        "origin_name": orig_name,
+        "dest_name": dest_name,
+        "origin_pos": list(origin),
+        "dest_pos": list(destination),
+        "tick": t,
+    }
+
+    candidate_routes_dict = {
+        "candidate_a": cand_a,
+        "candidate_b": cand_b,
+        "candidate_c": cand_c,
+        "baseline_cost": candidates.get("baseline_cost", chosen.get("baseline_cost", 0)),
+        "fuel_diff_pct": fuel_diff_b,
+        "fuel_diff_c_pct": fuel_diff_c,
+        "chosen_id": chosen_id,
+    }
+
+    _state["candidate_routes"] = candidate_routes_dict
+    _state["tradeoff_decision"] = decision_payload
+    _state["reasoning_trace"] = trace
+
+    current_route_payload = {
+        "waypoints": chosen["waypoints"],
+        "naive_waypoints": candidates.get("naive_waypoints", []),
+        "cost": chosen["cost"],
+        "baseline_cost": candidates.get("baseline_cost", chosen["cost"]),
+        "savings_pct": chosen["savings_pct"],
+        "chosen_candidate": chosen_id,
+        "origin": list(origin),
+        "destination": list(destination),
+    }
+
+    prev_wps = (_state.get("current_route") or {}).get("waypoints")
+    changed = (prev_wps != current_route_payload["waypoints"])
+    _state["current_route"] = current_route_payload
+    _state["baseline_route"] = {"waypoints": candidates.get("naive_waypoints", [])}
+    _state["metrics"]["fuel_savings_pct"] = chosen["savings_pct"]
+    if changed:
+        _state["metrics"]["reroute_count"] = _state["metrics"].get("reroute_count", 0) + 1
+        _log(f"[Orchestrator] -> [Fleet Dispatch]: Tradeoff selection updated to Candidate {chosen_id} ({decision_reason})")
+
+    return changed
+
+
+def _update_route(reason: str) -> bool:
+    """Trigger multi-agent tradeoff engine."""
+    return _run_route_tradeoff(reason)
 
 
 def _run_debris_tick(*, spawn_new: bool, n_new: int = 2) -> None:
@@ -427,11 +771,9 @@ def _run_debris_tick(*, spawn_new: bool, n_new: int = 2) -> None:
         prev = prev_assign.get(cid)
         if prev == hs["hotspot_id"]:
             continue
-        _log(
-            f"🔗 Debris Agent assigned collector {cid} to hotspot {hs['hotspot_id']} "
-            f"in response to Dark Vessel Agent flagging {p['det']['vessel_id']} "
-            f"({p['dist_km']:.0f} km from the hotspot)"
-        )
+        _log(f"[Surveillance Agent] -> [Orchestrator]: Flagged vessel V{p['det']['vessel_id']} near debris hotspot {hs['hotspot_id']}")
+        _log(f"[Orchestrator] -> [Debris Agent]: Priority assignment requested for hotspot {hs['hotspot_id']}")
+        _log(f"[Debris Agent] -> [Orchestrator]: Assigned collector {cid} to priority hotspot {hs['hotspot_id']}")
         logged += 1
         if logged >= 3:
             break
@@ -509,9 +851,9 @@ def initialise() -> None:
         llm_enabled=False,
         llm_briefs={},
     )
-    _log("🌊 MaritimeMAS engine initialised — Open-Meteo & NOAA data loaded")
+    _log("[Orchestrator] Initialising MaritimeMAS engine...")
     _log(
-        f"📡 Datasets: {len(ais_df)} AIS pings · {len(weather_df)} weather points · "
+        f"[Data Layer] Open-Meteo & NOAA data loaded — {len(ais_df)} AIS pings · {len(weather_df)} weather points · "
         f"{len(storm_df)} NOAA storm points · {len(fishing_zones)} GFW zones"
     )
 
@@ -535,6 +877,12 @@ def initialise() -> None:
     _log(
         f"🗑️ {len(_state['debris_hotspots'])} debris hotspots clustered, collectors assigned"
     )
+
+    # Agent 1 — initial commercial corridor and ports
+    _state["active_origin_name"] = "Houston / Galveston (US)"
+    _state["active_dest_name"] = "New Orleans / South Pass (US)"
+    _state["active_route_origin"] = ROUTE_ORIGIN
+    _state["active_route_destination"] = ROUTE_DESTINATION
 
     # Agent 1 — initial optimised route
     _state["current_route"] = get_route(ROUTE_ORIGIN, ROUTE_DESTINATION, weather_df)
@@ -602,6 +950,7 @@ def tick() -> None:
         _update_route("dark vessel rescan")
     else:
         _update_vessel_memory(t)
+        _run_route_tradeoff(f"tick {t}")
 
     _state["vessel_positions"] = _vessel_state_at_tick(t)
 
@@ -650,6 +999,11 @@ def get_state() -> dict[str, Any]:
         "collectors": _state["collectors"],
         "current_route": _state["current_route"],
         "baseline_route": _state["baseline_route"],
+        "candidate_routes": _state.get("candidate_routes"),
+        "tradeoff_decision": _state.get("tradeoff_decision"),
+        "reasoning_trace": _state.get("reasoning_trace") or [],
+        "risk_threshold": _state.get("risk_threshold", DEFAULT_RISK_AVOIDANCE_THRESHOLD_PCT),
+        "gulf_zones": GULF_ZONES,
         "flagged_vessels": _state["flagged_vessels"],
         "storm_mode_active": _state["storm_mode_active"],
         "storm_eye_pos": _state["storm_eye_pos"],
@@ -661,6 +1015,10 @@ def get_state() -> dict[str, Any]:
         "llm_briefs": dict(_state.get("llm_briefs") or {}),
         "detection_thresholds": dict(_state.get("detection_thresholds") or {}),
         "vessel_origins": dict(_state.get("vessel_origins") or {}),
+        "active_origin_name": _state.get("active_origin_name", "Houston / Galveston (US)"),
+        "active_dest_name": _state.get("active_dest_name", "New Orleans / South Pass (US)"),
+        "active_route_origin": _state.get("active_route_origin", ROUTE_ORIGIN),
+        "active_route_destination": _state.get("active_route_destination", ROUTE_DESTINATION),
     }
 
 

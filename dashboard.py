@@ -325,7 +325,7 @@ def _apply_basemap(folium_map, choice: str) -> None:
             overlay=False,
             control=True,
         ).add_to(folium_map)
-    elif "Esri" in choice:
+    elif "Imagery" in choice:
         folium.TileLayer(
             tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
             attr="Esri World Imagery",
@@ -1121,13 +1121,18 @@ def _live_ops_panel(header_slot, kpi_slot, map_feed_slot=None, explain_slot=None
                         st.markdown("<div style='margin-top: 28px'></div>", unsafe_allow_html=True)
                         submit_search = st.form_submit_button("Locate", use_container_width=True)
                         
-                    if submit_search and search_vid:
-                        st.session_state["search_focus_vessel"] = search_vid
-                        st.session_state["active_search_vessel"] = search_vid
-                        from agents.investigator import generate_vessel_brief
-                        with st.spinner("Generating investigative brief..."):
-                            brief = generate_vessel_brief(search_vid, live)
-                            st.session_state["active_search_brief"] = brief
+                    if submit_search:
+                        if search_vid:
+                            st.session_state["search_focus_vessel"] = search_vid
+                            st.session_state["active_search_vessel"] = search_vid
+                            from agents.investigator import generate_vessel_brief
+                            with st.spinner("Generating investigative brief..."):
+                                brief = generate_vessel_brief(search_vid, live)
+                                st.session_state["active_search_brief"] = brief
+                        else:
+                            st.session_state["search_focus_vessel"] = None
+                            st.session_state["active_search_vessel"] = None
+                            st.session_state.pop("active_search_brief", None)
 
                 active_search = st.session_state.get("active_search_vessel")
                 brief = st.session_state.get("active_search_brief")
@@ -1137,7 +1142,8 @@ def _live_ops_panel(header_slot, kpi_slot, map_feed_slot=None, explain_slot=None
                         st.error(brief["error"])
                     else:
                         if brief.get("is_flagged"):
-                            fv = live.get("detection_by_id", {}).get(active_search, {})
+                            flagged_vessels = live.get("flagged_vessels", [])
+                            fv = next((v for v in flagged_vessels if str(v.get("vessel_id")) == str(active_search)), {})
                             conf = fv.get("confidence", 0)
                             max_g = fv.get("max_gap_minutes", 0)
                             disp = fv.get("displacement_error_km", 0)
@@ -1156,10 +1162,6 @@ def _live_ops_panel(header_slot, kpi_slot, map_feed_slot=None, explain_slot=None
                             st.success("✅ Normal operating vessel")
                             
                         st.markdown(f"**Summary:** {brief.get('summary')}")
-                        with st.expander("View Tool Trace"):
-                            for call in brief.get("tool_calls", []):
-                                st.markdown(f"**Tool:** `{call.get('tool')}`")
-                                st.json({"input": call.get("input"), "result": call.get("result")})
                         
                         analyst = _current_analyst()
                         if analyst:
@@ -1193,7 +1195,7 @@ def _live_ops_panel(header_slot, kpi_slot, map_feed_slot=None, explain_slot=None
                 map_html, rebuilt, build_ms = _get_cached_live_folium_map(live, choice)
                 _show_live_map(map_html, rebuilt, live.get("tick"), build_ms)
                 route = live.get("current_route") or {}
-                if active_search and brief and not brief.get("error"):
+                if active_search:
                     # Show vessel-specific route info
                     v = next((x for x in live.get("vessel_positions", []) if x["vessel_id"] == active_search), None)
                     if v:

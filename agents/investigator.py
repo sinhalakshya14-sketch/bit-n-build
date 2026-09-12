@@ -14,45 +14,13 @@ import math
 import os
 from typing import Any
 
+from groq import Groq
+
 from data.reference import load_companies, load_lighthouses, load_ports
 
-MODEL = "claude-3-5-sonnet-20241022"
+MODEL = "openai/gpt-oss-120b"
 
-TOOLS = [
-    {
-        "name": "nearest_port",
-        "description": "Nearest named port from local reference CSV (lat/lon).",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "lat": {"type": "number"},
-                "lon": {"type": "number"},
-            },
-            "required": ["lat", "lon"],
-        },
-    },
-    {
-        "name": "nearest_lighthouse",
-        "description": "Nearest lighthouse from local reference CSV (lat/lon).",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "lat": {"type": "number"},
-                "lon": {"type": "number"},
-            },
-            "required": ["lat", "lon"],
-        },
-    },
-    {
-        "name": "companies_at_port",
-        "description": "Illustrative operators whose HQ port matches the given port name.",
-        "input_schema": {
-            "type": "object",
-            "properties": {"port_name": {"type": "string"}},
-            "required": ["port_name"],
-        },
-    },
-]
+# Tools definition moved to local function call
 
 
 def _haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -114,7 +82,7 @@ def _dispatch(name: str, args: dict) -> Any:
 
 
 def llm_configured() -> bool:
-    return bool(os.getenv("ANTHROPIC_API_KEY"))
+    return bool(os.getenv("GROQ_API_KEY"))
 
 
 def investigate_vessel(vessel: dict[str, Any], *, use_llm: bool = True) -> dict[str, Any]:
@@ -136,28 +104,27 @@ def investigate_vessel(vessel: dict[str, Any], *, use_llm: bool = True) -> dict[
             {"name": "companies_at_port", "input": {"port_name": port.get("name")}, "output": cos},
         ]
         ops = ", ".join(c.get("name", "?") for c in cos) or "no illustrative operator on file"
-        is_flagged = vessel.get("max_gap_minutes", 0) > 0
+        is_flagged = vessel.get("is_flagged", False)
         if is_flagged:
+            conf = vessel.get("confidence", 0)
             summary = (
-                f"🚨 {vessel.get('vessel_id')} flagged for dark activity. Gap duration: {vessel.get('max_gap_minutes')} min, "
+                f"🚨 {vessel.get('vessel_id')} flagged for dark activity (Confidence: {conf:.0%}). Gap duration: {vessel.get('max_gap_minutes')} min, "
                 f"DR discrepancy: {vessel.get('displacement_error_km')} km. "
                 f"It went dark ~{port.get('distance_nm')} nm from {port.get('name')} "
                 f"({port.get('state')}). Nearest light: {light.get('name')} "
                 f"({light.get('distance_nm')} nm). Operators tied to that HQ port: {ops}. "
-                f"(Deterministic lookup — set ANTHROPIC_API_KEY and enable LLM briefs for Claude.)"
+                f"(Deterministic lookup — set GROQ_API_KEY and enable LLM briefs for Groq.)"
             )
         else:
             summary = (
                 f"✅ {vessel.get('vessel_id')} is operating normally. No anomaly detected. "
                 f"Current position: {lat:.4f}, {lon:.4f}. Speed: {vessel.get('speed', 'N/A')} kts, Heading: {vessel.get('heading', 'N/A')}°. "
                 f"Nearest port is {port.get('name')} ({port.get('state')}) at {port.get('distance_nm')} nm. "
-                f"(Deterministic lookup — set ANTHROPIC_API_KEY and enable LLM briefs for Claude.)"
+                f"(Deterministic lookup — set GROQ_API_KEY and enable LLM briefs for Groq.)"
             )
         return {"summary": summary, "tool_calls": tool_calls, "model": "local-lookup", "used_llm": False}
 
-    from anthropic import Anthropic
-
-    client = Anthropic()
+    client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
     user = (
         f"Investigate flagged vessel {vessel.get('vessel_id')}. "
         f"Last known position {lat:.4f}, {lon:.4f}. "
@@ -165,41 +132,93 @@ def investigate_vessel(vessel: dict[str, Any], *, use_llm: bool = True) -> dict[
         f"dead-reckoning error {vessel.get('displacement_error_km')} km, "
         f"scan confidence {vessel.get('scan_confidence', vessel.get('confidence'))}. "
         "Use tools to find nearest port, nearest lighthouse, and any company at that port. "
-        "Write 3-5 sentences citing the tool results (include nm distances)."
+        f"Explicitly mention the confidence score ({vessel.get('scan_confidence', vessel.get('confidence', 0)):.1%}) in the summary text. "
+        "Write 3-5 sentences smoothly integrating the facts (include nm distances). "
+        "Do NOT explicitly write things like '(see nearest_port result)' or mention tool names in your text. "
+        "Just write the narrative naturally."
     )
     messages: list[dict[str, Any]] = [{"role": "user", "content": user}]
     summary = ""
+
+    # Groq OpenAI-compatible tools parameter format
+    groq_tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "nearest_port",
+                "description": "Finds the nearest major commercial port to a given latitude and longitude.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "lat": {"type": "number"},
+                        "lon": {"type": "number"}
+                    },
+                    "required": ["lat", "lon"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "nearest_lighthouse",
+                "description": "Finds the nearest navigation light/lighthouse.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "lat": {"type": "number"},
+                        "lon": {"type": "number"}
+                    },
+                    "required": ["lat", "lon"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "companies_at_port",
+                "description": "Lists maritime companies operating near a specific port city.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "port_name": {"type": "string"}
+                    },
+                    "required": ["port_name"]
+                }
+            }
+        }
+    ]
+
     for _ in range(4):
-        resp = client.messages.create(
+        resp = client.chat.completions.create(
             model=MODEL,
             max_tokens=800,
-            tools=TOOLS,
+            tools=groq_tools,
             messages=messages,
         )
-        blocks = resp.content
-        tool_uses = [b for b in blocks if getattr(b, "type", None) == "tool_use"]
-        texts = [b.text for b in blocks if getattr(b, "type", None) == "text"]
-        if texts:
-            summary = texts[-1]
-        if resp.stop_reason == "end_turn" or not tool_uses:
+        msg = resp.choices[0].message
+        
+        if msg.content:
+            summary = msg.content
+            
+        tool_uses = msg.tool_calls
+        if not tool_uses:
             break
-        messages.append({"role": "assistant", "content": blocks})
-        tool_results = []
+            
+        messages.append(msg)
         for tu in tool_uses:
-            args = tu.input if isinstance(tu.input, dict) else json.loads(tu.input)
-            out = _dispatch(tu.name, args)
-            tool_calls.append({"name": tu.name, "input": args, "output": out})
-            tool_results.append(
+            args = json.loads(tu.function.arguments)
+            out = _dispatch(tu.function.name, args)
+            tool_calls.append({"name": tu.function.name, "input": args, "output": out})
+            messages.append(
                 {
-                    "type": "tool_result",
-                    "tool_use_id": tu.id,
+                    "role": "tool",
+                    "tool_call_id": tu.id,
                     "content": json.dumps(out, default=str),
                 }
             )
-        messages.append({"role": "user", "content": tool_results})
 
     if not summary:
-        summary = "Claude returned no narrative after tool use."
+        summary = "Groq returned no narrative after tool use."
     return {"summary": summary, "tool_calls": tool_calls, "model": MODEL, "used_llm": True}
 
 
@@ -220,14 +239,15 @@ def generate_vessel_brief(vessel_id: str, state: dict) -> dict:
             "error": f"Vessel '{vessel_id}' not found in current state."
         }
         
-    det_by_id = state.get("detection_by_id", {})
-    det = det_by_id.get(vessel_id)
+    flagged_vessels = state.get("flagged_vessels", [])
+    det = next((fv for fv in flagged_vessels if str(fv.get("vessel_id")) == str(vessel_id)), None)
     
-    is_flagged = bool(det and det.get("flagged"))
+    is_flagged = bool(det)
     confidence = det.get("confidence") if det else None
     
     target_vessel = dict(vessel)
     target_vessel["last_known_position"] = [vessel.get("lat"), vessel.get("lon")]
+    target_vessel["is_flagged"] = is_flagged
     
     if det:
         target_vessel["max_gap_minutes"] = det.get("max_gap_minutes", 0)

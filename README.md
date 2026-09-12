@@ -1,103 +1,88 @@
-# MaritimeMAS — Gulf of Mexico Multi-Agent System (Production Upgrade)
+# Maritime Autonomous Multi-Agent System (GulfMAS)
 
-A real-time, production-grade maritime operations dashboard combining three coordinated AI agents over the US Gulf Coast (lat 27–30°N, lon −95–−88°W).
+A 24-hour hackathon MVP of a coordinated multi-agent maritime system for the **Gulf of Mexico / US Gulf Coast** region.
+
+Three AI agents share a common state and coordinate through a lightweight in-process orchestrator, surfaced on an interactive Streamlit + pydeck command dashboard.
 
 ---
 
 ## 🚀 Quick Start
 
-```powershell
-# Navigate to project folder
-cd "C:\Users\LAKSHYA SINHA\.gemini\antigravity\scratch\maritime-mas"
+### 1. Installation
 
-# Run automated smoke test
-python smoke_test.py
+Ensure Python 3.11+ is installed, then install the dependencies:
 
-# Launch the live dashboard
-python -m streamlit run dashboard.py
+```bash
+pip install -r requirements.txt
 ```
 
-Open **`http://localhost:8501`** in your browser. Click **▶️ Auto-Play** in the sidebar to start the simulation.
+### 2. Launch the Dashboard
+
+```bash
+streamlit run dashboard.py
+```
+
+Open your browser to `http://localhost:8501`.
 
 ---
 
-## 🌟 Upgraded Features & Capabilities
-
-### 🛰️ Real Satellite Imagery Base Map
-- Built on **Esri World Imagery** satellite tile services (`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer`).
-- Displays true satellite coastline, offshore shelves, and land boundaries across the Gulf of Mexico without needing Mapbox tokens.
-
-### ⚓ Real-Time Animated Vessel & Wake Layer
-- Vessels display vector headings and directional indicators matching true AIS course.
-- **Fading Wake Trails**: Tracks each vessel's historical positions over time for smooth visual movement.
-
-### 💡 AI Explainability Panel ("Why was this flagged?")
-- Collapsible detailed explainability cards for every dark vessel flagged by `sklearn.ensemble.IsolationForest`.
-- Surfacing exact metrics: transponder gap duration (min), dead-reckoning displacement error (km), speed delta (kts), and heading shift (°), paired with plain-language explanation text.
-
-### 🌀 NOAA Hurricane Ida Demo Mode (Cat 4 Storm Avoidance)
-- Replays real **NOAA HURDAT2** historical storm track data for **Hurricane Ida (Aug 2021)** as it traversed the Gulf of Mexico.
-- **Dynamic Cross-Agent Rerouting**: When enabled, the storm eye and gale force radius add dynamic cost penalties to the grid graph, triggering Agent 1 to dynamically route around the Cat 4 eye in real time.
-
-### 🐟 Global Fishing Watch (GFW) Spatial Layer
-- Overlays real commercial fishing effort zones across the Mississippi Delta Shrimping Fleet, Texas Menhaden Fishery, and Pelagic Reef Fishing areas.
-- Allows operators to contextualize dark vessel flags against known fishing grounds.
-
-### ⏱️ Interactive Timeline Scrubber
-- Full state snapshotting engine allowing operators to scrub backwards and forwards to replay past simulation ticks.
-
----
-
-## 📊 Data Authenticity Breakdown
-
-| Dataset | Data Origin | Status | Description & Date Range |
-|---|---|---|---|
-| **Weather** | Open-Meteo Marine API | **REAL** | Live hourly wave height, wind speed/direction, and ocean current velocity sampled via HTTP API. |
-| **Storm Track** | NOAA HURDAT2 Database | **REAL HISTORICAL** | Actual track points, wind speeds (kts), and central pressure (mb) for Hurricane Ida (Aug 27–29, 2021). |
-| **Fishing Zones** | Global Fishing Watch (GFW) | **REAL SPATIAL** | EEZ boundaries, shrimping fleet coordinates, and pelagic fishing effort zones in the Gulf shelf. |
-| **AIS Tracks** | NOAA Cadastre Schema | **SYNTHETIC (HIGH DENSITY)** | 50 vessels generated along canonical Gulf shipping lanes over a 24-hour density window. |
-| **Debris Sightings**| NOAA Marine Debris Program | **SYNTHETIC** | 25 coastal seed points near Louisiana & Texas shelf matching NOAA marine debris survey schema. |
-
----
-
-## 🤖 Multi-Agent Architecture
-
-```
-maritime-mas/
-├── data/
-│   └── loader.py          # Real Open-Meteo API, NOAA HURDAT2 storm track, GFW zones, AIS, Debris
-├── agents/
-│   ├── route.py           # Agent 1: A* grid solver with weather & storm avoidance cost multipliers
-│   ├── dark_vessel.py     # Agent 2: AIS transponder gap injection & IsolationForest anomaly detection
-│   └── debris.py          # Agent 3: Drift spawner, DBSCAN clustering & collector vessel assignment
-├── orchestrator.py        # Central state, tick history snapshotter, cross-agent reroute engine
-├── dashboard.py           # Streamlit + Pydeck Esri Satellite UI app
-├── smoke_test.py          # End-to-end verification script
-├── requirements.txt       # Dependencies
-└── README.md
-```
+## 🏗️ Architecture & Agents
 
 ### Agent 1 — Route Optimization (`agents/route.py`)
-- Grid graph solver over 0.25° grid resolution (~27 km).
-- Edge weights = Distance × (1 + Wave Penalty + Headwind Penalty + Obstacle Penalty).
-- Computes baseline straight-line costs vs optimized A* route to output net fuel savings %.
+- **Technology:** `networkx` weighted grid graph over bounding box (Lat 27–30°N, Lon -95–-88°W).
+- **Edge Cost:** Haversine distance penalized by weather factors (wave height and wind speed/direction).
+- **Algorithm:** $A^*$ heuristic search (`astar_path`).
+- **Baseline Comparison:** Straight-line path through identical weather fields to compute realistic fuel/cost savings %.
+- **Dynamic Hazard Avoidance:** Dynamically inflates edge weights near any flagged dark vessels (`avoid_points`) to reroute vessels around security or collision hazards.
 
 ### Agent 2 — Dark Vessel Detection (`agents/dark_vessel.py`)
-- Injects realistic AIS transponder cut-outs.
-- Extracts per-vessel feature vectors: `max_gap_minutes`, `mean_gap_minutes`, `displacement_error_km`, `speed_change_after_gap`, `heading_change_after_gap`, `ping_count`.
-- Trains `IsolationForest` (contamination=0.25) to flag suspicious non-transponding vessels with precision & recall metrics.
+- **Technology:** `scikit-learn` `IsolationForest` anomaly detection.
+- **Workflow:** Simulates AIS transponder tampering by dropping ping windows.
+- **Feature Engineering:**
+  1. Maximum time-gap length (minutes).
+  2. Speed delta across the gap.
+  3. Heading change across the gap.
+  4. Spatial position deviation between dead-reckoning (predicted straight line) and actual reappearance.
+- Evaluates against ground-truth labels and outputs confidence-weighted anomaly flags.
 
-### Agent 3 — Marine Debris Coordination (`agents/debris.py`)
-- Simulates coastal drift by spawning new sightings near existing hotspots.
-- Runs **DBSCAN** clustering (`eps` ≈ 55 km, `min_samples` = 2).
-- Assigns collector vessels based on transit distance and computes ETA for cleanup operations.
+### Agent 3 — Debris Coordination (`agents/debris.py`)
+- **Technology:** `scikit-learn` `DBSCAN` clustering.
+- **Workflow:** Takes coastal debris sightings and clusters active sightings into high-density pollution hotspots.
+- **Collector Dispatch:** Simulates a fleet of 4 autonomous cleanup vessels (`COLLECTOR_1` through `COLLECTOR_4`) and assigns each hotspot to the nearest collector vessel via Euclidean/Haversine distance minimization.
+
+### In-Process Orchestrator (`orchestrator.py`)
+- Maintains a single thread-safe shared state dictionary.
+- Coordinates cross-agent interaction: **If a flagged dark vessel's position falls within 35 nautical miles of the active route, Agent 1 is invoked to recompute the path around the hazard.**
+- Logs all state changes and operational interventions in timestamped plain English.
 
 ---
 
-## ⚡ Verification & Testing
+## 📊 Data Sources (Real vs. Synthetic)
 
-To run the complete automated test suite:
-```powershell
-python smoke_test.py
-```
-Outputs `[PASS]` for all 22+ validation checks across data loading, graph pathfinding, anomaly detection, collector assignment, storm mode toggle, and snapshot replay.
+| Dataset | Status | Details |
+|---|---|---|
+| **AIS Vessel Tracks** | **Synthetic** | NOAA Marine Cadastre files are multi-gigabyte archives. Generated ~30 vessels navigating realistic Gulf shipping lanes (Galveston, Houston, Mississippi Delta, Mobile) with kinematic heading and speed jitter. |
+| **Marine Weather** | **Synthetic** | Generated grid with wave heights and wind speeds, featuring an intentional storm cell near $28.5^\circ\text{N}, -91.5^\circ\text{W}$ to demonstrate routing variance. *(Open-Meteo live API integration code is structured in the data module for production expansion)*. |
+| **Marine Debris** | **Synthetic** | NOAA Marine Debris Program seed locations placed along the Texas/Louisiana/Alabama coastline with dynamic multi-step drift and new sighting spawn loops. |
+
+---
+
+## 🖥️ Dashboard Features
+
+- **PyDeck Visual Map:**
+  - 🟢 **Green Path:** Weather-optimized $A^*$ route.
+  - 🔵 **Cyan Points:** Commercial AIS traffic.
+  - 🔴 **Red Nodes:** Flagged dark/anomalous vessels.
+  - 🟡 **Yellow Circles:** Debris hotspots sized by cluster density.
+  - 🟣 **Purple Nodes & Vector Lines:** Autonomous cleanup vessels and their dispatch targets.
+- **Side Panel Metrics:** Live fuel savings %, count of intercepted dark vessels, and active debris hotspots covered.
+- **Multi-Agent Event Feed:** Chronological real-time plain-English audit log of agent operations and rerouting triggers.
+- **Interactive Controls:** Step simulation button (tick) and continuous auto-play toggle.
+
+---
+
+## ⚠️ Known Shortcuts & Hackathon Limitations
+
+1. **Single-Process Model:** Designed for speed and simplicity during a 24-hour sprint; does not use Celery or Kafka.
+2. **Nearest-Neighbor Dispatch:** Debris collector assignment uses greedy nearest distance rather than a full Hungarian algorithm or auction bidding.
+3. **Grid Discretization:** The routing graph uses a $0.25^\circ$ (~15 nm) grid resolution for sub-second $A^*$ response.

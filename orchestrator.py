@@ -245,6 +245,57 @@ def refresh_investigations() -> None:
     _maybe_investigate_flagged()
 
 
+def get_vessel_origin_dest(vid: str) -> dict[str, Any]:
+    if not _state or "tracks" not in _state:
+        return {}
+    
+    # vid might be an int or string depending on dataframe parsing, so string cast for robustness
+    track = _state["tracks"].get(str(vid)) or _state["tracks"].get(int(vid) if str(vid).isdigit() else vid)
+    if not track:
+        return {}
+    
+    first = track[0]
+    last = track[-1]
+    
+    from agents.investigator import nearest_port
+    origin = nearest_port(first[0], first[1])
+    dest = nearest_port(last[0], last[1])
+    return {"origin": origin, "dest": dest}
+
+
+def generate_single_brief(vid: str) -> None:
+    if not _state:
+        initialise()
+    
+    # We will let single brief generate regardless of global llm_enabled toggle.
+    # The investigator tool handles API key absence internally.
+        
+    det = _state.get("detection_by_id", {}).get(vid)
+    # If not in detection_by_id, it might be a normal vessel. Let's create a minimal det object.
+    if not det:
+        track = _state["tracks"].get(str(vid)) or _state["tracks"].get(int(vid) if str(vid).isdigit() else vid)
+        if not track:
+            return
+        last_pos = track[-1]
+        det = {
+            "vessel_id": vid,
+            "lat": last_pos[0],
+            "lon": last_pos[1],
+            "max_gap_minutes": 0,
+            "displacement_error_km": 0,
+            "confidence": 0,
+        }
+        
+    briefs = _state.setdefault("llm_briefs", {})
+    tick = int(_state.get("tick") or 0)
+    key = f"{det['vessel_id']}@t{tick}"
+    
+    if key not in briefs:
+        briefs[key] = investigate_vessel(det, use_llm=True)
+        det["investigation"] = briefs[key]
+        _log(f"🕵️ Investigator briefed single vessel {det['vessel_id']} ({briefs[key].get('model')})")
+
+
 def set_detection_thresholds(gap_threshold_min: float, dr_threshold_km: float) -> None:
     """Update IMO-style rule cutoffs and rescan if they actually changed."""
     if not _state:

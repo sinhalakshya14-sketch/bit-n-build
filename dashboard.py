@@ -289,6 +289,10 @@ if "initialised" not in st.session_state:
     st.session_state.planner_origin = "Port of Houston"
     st.session_state.planner_dest = "Port of Tampa"
     st.session_state.nav_view = NAV_LIVE
+    if "search_focus_vessel" not in st.session_state:
+        st.session_state.search_focus_vessel = None
+    if "active_search_vessel" not in st.session_state:
+        st.session_state.active_search_vessel = None
 
 # Drop any leftover Folium HTML previously stuffed into session_state (P1).
 st.session_state.pop("_folium_map_cache", None)
@@ -475,23 +479,23 @@ def _render_kpi_strip(state: dict) -> None:
     st.markdown(
         f"""
         <div class="kpi-row">
-          <div class="kpi-card">
-            <div class="kpi-label">⛽ Fuel Savings</div>
+          <div class="kpi-card" title="Calculated dynamically: Optimal A* vs. naive distance-based path for the currently simulated corridor.">
+            <div class="kpi-label">⛽ Fuel Savings (Demo Corridor)</div>
             <div class="kpi-value accent-blue">{_m['fuel_savings_pct']:.1f}%</div>
             <div class="kpi-sub">Optimized route vs. naive straight line</div>
           </div>
-          <div class="kpi-card">
-            <div class="kpi-label">🚨 Dark Vessels Flagged</div>
+          <div class="kpi-card" title="Computed live per-tick from the anomaly detection model. Precision/Recall independently scored against random ground-truth masking (not circular).">
+            <div class="kpi-label">🚨 Flagged (Current Scan)</div>
             <div class="kpi-value accent-red">{_m['vessels_flagged']}</div>
             <div class="kpi-sub">Precision {_m['precision']:.0%} · Recall {_m['recall']:.0%}</div>
           </div>
-          <div class="kpi-card">
+          <div class="kpi-card" title="Live count of active debris hotspots currently assigned to collector vessels.">
             <div class="kpi-label">🗑️ Debris Hotspots Covered</div>
             <div class="kpi-value accent-amber">{_m['hotspots_covered']}</div>
             <div class="kpi-sub">Nearest-collector assignment</div>
           </div>
-          <div class="kpi-card">
-            <div class="kpi-label">🔄 Dynamic Reroutes</div>
+          <div class="kpi-card" title="Cumulative count over the entire simulation session of how many times the Route Agent recalculated a path.">
+            <div class="kpi-label">🔄 Dynamic Reroutes (Session)</div>
             <div class="kpi-value accent-green">{_m['reroute_count']}</div>
             <div class="kpi-sub">Cross-agent obstacle avoidance</div>
           </div>
@@ -528,10 +532,123 @@ def _render_event_feed(state: dict) -> None:
         )
 
 
+def _render_single_explain_card(fv: dict, analyst: str, watched_ids: set, state: dict, key_prefix: str = "") -> None:
+    vid = fv["vessel_id"]
+    on_watch = vid in watched_ids
+    conf = fv.get("confidence", 0)
+    max_g = fv.get("max_gap_minutes", 0)
+    disp = fv.get("displacement_error_km", 0)
+    spd = fv.get("speed_change_after_gap", 0)
+    hdg = fv.get("heading_change_after_gap", 0)
+    expl = fv.get("explanation", "Flagged by anomaly detector.")
+    decision = fv.get("if_decision", None)
+    z = fv.get("feature_z") or {}
+    z_html = ", ".join(f"{k}={v:.1f}" for k, v in z.items()) or "n/a"
+    live_th = state.get("detection_thresholds") or {}
+    gap_th = fv.get("flag_gap_threshold_min", live_th.get("gap_threshold_min", 45))
+    dr_th = fv.get("flag_dr_threshold_km", live_th.get("dr_threshold_km", 8))
+    note = fv.get("memory_note") or ""
+    scan_c = fv.get("scan_confidence", conf)
+    realert_badge = (
+        '<span class="badge badge-real">⭐ RE-ALERT</span>' if on_watch else ""
+    )
+    
+    # Optional styling adjustments based on prefix to help differentiate search results vs flagged
+    border_color = "#3b82f6" if key_prefix else "#f59e0b"
+    
+    route_info = orchestrator.get_vessel_origin_dest(vid)
+    orig_str = "Unknown"
+    dest_str = "Unknown"
+    if route_info:
+        o = route_info.get("origin") or {}
+        d = route_info.get("dest") or {}
+        if o:
+            orig_str = f"{o.get('name', 'Unknown')} ({o.get('state', '')})"
+        if d:
+            dest_str = f"{d.get('name', 'Unknown')} ({d.get('state', '')})"
+
+    html = (
+        f"<div class='explain-box' style='border-left-color: {border_color}'>"
+        f"<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:6px'>"
+        f"<b>Vessel {vid}</b>"
+        f"<span class='badge badge-syn'>Confidence {conf:.0%}</span>"
+        f"{realert_badge}"
+        "</div>"
+        f"<p style='margin-bottom:8px'><b>Route:</b> {orig_str} ➔ {dest_str}</p>"
+        f"<p>{expl}</p>"
+        f"<p style='font-size:0.8rem'><b>Memory:</b> {note} "
+        f"Scan-only score was {scan_c:.0%}.</p>"
+        "<p style='font-size:0.75rem;color:#fde68a'>"
+        f"Confidence is a logistic of the IsolationForest decision score"
+        f"{'' if decision is None else f' (decision={decision})'}"
+        " — not a min-max rank of this batch. "
+        f"Rule threshold: gap ≥ {gap_th:.0f} min (Class A underway normally reports within ~3 min; "
+        f"{gap_th:.0f} min allows coastal shadowing) and dead-reckoning error "
+        f"≥ {dr_th:.0f} km (projected from last speed/heading across the silence).</p>"
+        f"<div style='margin-top:8px;display:flex;flex-wrap:wrap;gap:14px;font-size:0.75rem'>"
+        f"<span>Transponder gap: <span class='explain-metric'>{max_g} min</span></span>"
+        f"<span>DR discrepancy: <span class='explain-metric'>{disp} km</span></span>"
+        f"<span>Speed delta: <span class='explain-metric'>{spd} kts</span></span>"
+        f"<span>Heading delta: <span class='explain-metric'>{hdg}°</span></span>"
+        f"<span>Top z-scores: <span class='explain-metric'>{z_html}</span></span>"
+        "</div></div>"
+    )
+    st.markdown(html, unsafe_allow_html=True)
+    if analyst:
+        if on_watch:
+            st.button(
+                "✓ On watchlist",
+                key=f"{key_prefix}wl_on_{vid}",
+                on_click=_watchlist_remove,
+                args=(vid,),
+            )
+        else:
+            st.button(
+                "⭐ Add to watchlist",
+                key=f"{key_prefix}wl_add_{vid}",
+                on_click=_watchlist_add,
+                args=(vid,),
+            )
+    brief = fv.get("investigation")
+    if not brief:
+        for k, b in (state.get("llm_briefs") or {}).items():
+            if k.startswith(str(vid) + "@"):
+                brief = b
+                break
+    if brief:
+        with st.expander(f"Investigator trace — {vid}", expanded=True):
+            st.caption(f"Model: {brief.get('model')} · LLM={brief.get('used_llm')}")
+            for call in brief.get("tool_calls") or []:
+                st.markdown(f"**Tool:** `{call.get('name')}`")
+                st.json({"input": call.get("input"), "output": call.get("output")})
+            st.markdown(brief.get("summary") or "")
+    else:
+        if st.button("🔍 Generate investigative brief for this vessel", key=f"{key_prefix}gen_brief_{vid}"):
+            with st.spinner("Generating brief..."):
+                orchestrator.generate_single_brief(vid)
+            st.rerun()
+
 def _render_flag_explain(state: dict) -> None:
     st.markdown("---")
     analyst = _current_analyst()
     watched_ids = {r["vessel_id"] for r in storage.get_watchlist(analyst)} if analyst else set()
+    
+    active_search = st.session_state.get("active_search_vessel")
+    if active_search:
+        st.markdown(f"##### 🔍 Searched Vessel — {active_search}")
+        det_by_id = state.get("detection_by_id") or {}
+        fv = det_by_id.get(active_search)
+        if not fv:
+            fv = {
+                "vessel_id": active_search,
+                "confidence": 0,
+                "explanation": "Normal operating vessel (not flagged by dark-vessel anomaly detector).",
+                "max_gap_minutes": 0,
+                "displacement_error_km": 0,
+            }
+        _render_single_explain_card(fv, analyst, watched_ids, state, key_prefix="search_")
+        st.markdown("<br/>", unsafe_allow_html=True)
+
     with st.expander("⭐ Add to watchlist — flagged vessels this tick", expanded=True):
         flagged = state.get("flagged_vessels", [])
         if not flagged:
@@ -540,79 +657,8 @@ def _render_flag_explain(state: dict) -> None:
         st.markdown("##### 🚨 Flagged Dark Vessels — Anomaly Analysis")
         shown = sorted(flagged, key=lambda r: r.get("confidence", 0), reverse=True)[:12]
         for fv in shown:
-            vid = fv["vessel_id"]
-            on_watch = vid in watched_ids
-            conf = fv.get("confidence", 0)
-            max_g = fv.get("max_gap_minutes", 0)
-            disp = fv.get("displacement_error_km", 0)
-            spd = fv.get("speed_change_after_gap", 0)
-            hdg = fv.get("heading_change_after_gap", 0)
-            expl = fv.get("explanation", "Flagged by anomaly detector.")
-            decision = fv.get("if_decision", None)
-            z = fv.get("feature_z") or {}
-            z_html = ", ".join(f"{k}={v:.1f}" for k, v in z.items()) or "n/a"
-            live_th = state.get("detection_thresholds") or {}
-            gap_th = fv.get("flag_gap_threshold_min", live_th.get("gap_threshold_min", 45))
-            dr_th = fv.get("flag_dr_threshold_km", live_th.get("dr_threshold_km", 8))
-            note = fv.get("memory_note") or ""
-            scan_c = fv.get("scan_confidence", conf)
-            realert_badge = (
-                '<span class="badge badge-real">⭐ RE-ALERT</span>' if on_watch else ""
-            )
-            html = (
-                "<div class='explain-box'>"
-                f"<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:6px'>"
-                f"<b>Vessel {vid}</b>"
-                f"<span class='badge badge-syn'>Confidence {conf:.0%}</span>"
-                f"{realert_badge}"
-                "</div>"
-                f"<p>{expl}</p>"
-                f"<p style='font-size:0.8rem'><b>Memory:</b> {note} "
-                f"Scan-only score was {scan_c:.0%}.</p>"
-                "<p style='font-size:0.75rem;color:#fde68a'>"
-                f"Confidence is a logistic of the IsolationForest decision score"
-                f"{'' if decision is None else f' (decision={decision})'}"
-                " — not a min-max rank of this batch. "
-                f"Rule threshold: gap ≥ {gap_th:.0f} min (Class A underway normally reports within ~3 min; "
-                f"{gap_th:.0f} min allows coastal shadowing) and dead-reckoning error "
-                f"≥ {dr_th:.0f} km (projected from last speed/heading across the silence).</p>"
-                f"<div style='margin-top:8px;display:flex;flex-wrap:wrap;gap:14px;font-size:0.75rem'>"
-                f"<span>Transponder gap: <span class='explain-metric'>{max_g} min</span></span>"
-                f"<span>DR discrepancy: <span class='explain-metric'>{disp} km</span></span>"
-                f"<span>Speed delta: <span class='explain-metric'>{spd} kts</span></span>"
-                f"<span>Heading delta: <span class='explain-metric'>{hdg}°</span></span>"
-                f"<span>Top z-scores: <span class='explain-metric'>{z_html}</span></span>"
-                "</div></div>"
-            )
-            st.markdown(html, unsafe_allow_html=True)
-            if analyst:
-                if on_watch:
-                    st.button(
-                        "✓ On watchlist",
-                        key=f"wl_on_{vid}",
-                        on_click=_watchlist_remove,
-                        args=(vid,),
-                    )
-                else:
-                    st.button(
-                        "⭐ Add to watchlist",
-                        key=f"wl_add_{vid}",
-                        on_click=_watchlist_add,
-                        args=(vid,),
-                    )
-            brief = fv.get("investigation")
-            if not brief:
-                for k, b in (state.get("llm_briefs") or {}).items():
-                    if k.startswith(str(vid) + "@"):
-                        brief = b
-                        break
-            if brief:
-                with st.expander(f"Investigator trace — {vid}", expanded=False):
-                    st.caption(f"Model: {brief.get('model')} · LLM={brief.get('used_llm')}")
-                    for call in brief.get("tool_calls") or []:
-                        st.markdown(f"**Tool:** `{call.get('name')}`")
-                        st.json({"input": call.get("input"), "output": call.get("output")})
-                    st.markdown(brief.get("summary") or "")
+            _render_single_explain_card(fv, analyst, watched_ids, state, key_prefix="")
+            
         if len(flagged) > 12:
             st.caption(f"Showing top 12 of {len(flagged)} flagged vessels by confidence.")
 
@@ -712,7 +758,18 @@ def _gfw_zone_key(zones: list) -> tuple:
 
 def _build_live_folium_map(state: dict, choice: str):
     """Dynamic live-map layers on a canvas-backed Folium map."""
-    folium_map = _new_gulf_map(choice)
+    focus_vid = st.session_state.get("search_focus_vessel")
+    center = GULF_CENTER
+    zoom = GULF_ZOOM
+    if focus_vid:
+        for v in state.get("vessel_positions", []):
+            if v["vessel_id"] == focus_vid:
+                center = (v["lat"], v["lon"])
+                zoom = 10
+                break
+        st.session_state["search_focus_vessel"] = None
+
+    folium_map = _new_gulf_map(choice, center=center, zoom=zoom)
 
     if st.session_state.show_gfw and state.get("fishing_zones"):
         gj = _static_gfw_geojson(_gfw_zone_key(state["fishing_zones"]))
@@ -826,11 +883,21 @@ def _build_live_folium_map(state: dict, choice: str):
         )
 
     active_features = []
+    active_search_vid = st.session_state.get("active_search_vessel")
     for v in state.get("vessel_positions", []):
         vid = v["vessel_id"]
         is_flagged = v.get("flagged", False)
         vlat, vlon = v["lat"], v["lon"]
         heading = v.get("heading", 0)
+        
+        if vid == active_search_vid:
+            folium.Marker(
+                location=[vlat, vlon],
+                icon=folium.Icon(color="purple", icon="star", prefix="fa"),
+                popup=folium.Popup(f"<b>Vessel {vid}</b><br/>Search Target", max_width=280),
+                z_index_offset=1000,
+            ).add_to(folium_map)
+
         if not is_flagged:
             active_features.append(
                 {
@@ -916,6 +983,8 @@ def _live_map_cache_key(state: dict, choice: str) -> tuple:
         bool(st.session_state.get("show_gfw")),
         bool(st.session_state.get("show_before_after")),
         bool(state.get("storm_mode_active")),
+        st.session_state.get("search_focus_vessel"),
+        st.session_state.get("active_search_vessel"),
     )
 
 
@@ -1052,6 +1121,20 @@ def _live_ops_panel(header_slot, kpi_slot, map_feed_slot=None, explain_slot=None
             map_col, feed_col = st.columns([3.2, 1.3])
             with map_col:
                 st.markdown('<div class="section-heading">🗺️ Live Operations Map</div>', unsafe_allow_html=True)
+                
+                with st.form("vessel_search_form"):
+                    cols = st.columns([3, 1])
+                    with cols[0]:
+                        all_vids = sorted([v["vessel_id"] for v in live.get("vessel_positions", [])])
+                        search_vid = st.selectbox("Search and center on vessel", [""] + all_vids, index=0)
+                    with cols[1]:
+                        st.markdown("<div style='margin-top: 28px'></div>", unsafe_allow_html=True)
+                        submit_search = st.form_submit_button("Locate", use_container_width=True)
+                        
+                    if submit_search and search_vid:
+                        st.session_state["search_focus_vessel"] = search_vid
+                        st.session_state["active_search_vessel"] = search_vid
+                        
                 st.markdown(
                     """
                     <div class="legend-bar">
@@ -1093,7 +1176,7 @@ def _live_ops_panel(header_slot, kpi_slot, map_feed_slot=None, explain_slot=None
                     st.markdown(
                         f"""
                         <div class="route-bar">
-                          <div>📍 <b>Origin:</b> Houston/Galveston (29.3°N, 94.8°W) &nbsp;➔&nbsp; 📍 <b>Dest:</b> New Orleans (29.9°N, 90.1°W)</div>
+                          <div>🧭 <b>Reference Corridor (Demo):</b> Houston/Galveston (29.3°N, 94.8°W) &nbsp;➔&nbsp; New Orleans (29.9°N, 90.1°W)</div>
                           <div><b>Naive:</b> <span style="color:#f87171">{bl_cost:.1f}</span> &nbsp;·&nbsp; <b>Optimized:</b> <span style="color:#38bdf8">{opt_cost:.1f}</span> &nbsp;·&nbsp; <b>Fuel saved:</b> <span style="color:#34d399;font-weight:700">{sav:.1f}%</span></div>
                         </div>
                         """,
@@ -1312,16 +1395,6 @@ with st.sidebar:
         key="dr_threshold_km",
     )
     orchestrator.set_detection_thresholds(float(gap_slider), float(dr_slider))
-
-    llm_on = st.checkbox(
-        "LLM investigative briefs",
-        help="Uses Anthropic claude-sonnet-4-6 with local port/lighthouse/company tools. Cached per vessel per tick. Requires ANTHROPIC_API_KEY.",
-        key="llm_briefs_on",
-    )
-    orchestrator.set_llm_enabled(llm_on)
-    if llm_on and st.button("Generate briefs (top 3 flags)", width="stretch"):
-        orchestrator.refresh_investigations()
-        st.rerun()
 
     st.markdown("<br/>", unsafe_allow_html=True)
     st.markdown('<div class="section-heading">🌀 Special Demo Modes</div>', unsafe_allow_html=True)

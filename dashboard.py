@@ -1069,88 +1069,23 @@ def _get_cached_live_folium_map(state: dict, choice: str) -> tuple:
 
 
 def _hide_parked_live_map() -> None:
-    """Hide the parent-parked Leaflet iframe when Live Map is not the active view."""
-    components.html(
-        """
-        <script>
-        (function () {
-          try {
-            const park = window.parent.document.getElementById("masLiveMapPark");
-            if (park) park.style.display = "none";
-          } catch (e) {}
-        })();
-        </script>
-        """,
-        height=0,
-        scrolling=False,
-    )
+    pass
 
 
 def _show_live_map(map_html: str | None, rebuilt: bool, tick, build_ms: float) -> None:
-    """Keep Leaflet in a parent-parked iframe so fragment reruns do not reparse 2,000 markers.
-
-    Rebuild (new tick / layers): send Folium HTML once and assign park.srcdoc.
-    Cache hit (e.g. analyst name Enter): send only a spacer + reposition script — no map HTML.
-    """
-    payload = ""
-    if rebuilt and map_html:
-        payload = base64.b64encode(map_html.encode("utf-8")).decode("ascii")
+    """Render the live Folium map directly inside Streamlit using components.html."""
+    if not map_html:
+        st.warning("Map is generating...")
+        return
     components.html(
-        f"""
-<div id="mas-map-slot" style="height:780px;width:100%;background:#0b1220;border-radius:8px;"></div>
-<script>
-(function () {{
-  const HEIGHT = 780;
-  const PARK_ID = "masLiveMapPark";
-  const payload = {json.dumps(payload)};
-  function parentDoc() {{
-    try {{ return window.parent.document; }} catch (e) {{ return null; }}
-  }}
-  function place(park) {{
-    const slot = document.getElementById("mas-map-slot");
-    const fe = window.frameElement;
-    if (!slot || !fe) return;
-    const fr = fe.getBoundingClientRect();
-    const sr = slot.getBoundingClientRect();
-    park.style.position = "fixed";
-    park.style.left = (fr.left + sr.left) + "px";
-    park.style.top = (fr.top + sr.top) + "px";
-    park.style.width = Math.max(sr.width, 1) + "px";
-    park.style.height = HEIGHT + "px";
-    park.style.zIndex = "45";
-    park.style.border = "0";
-    park.style.display = "block";
-    park.style.background = "#0b1220";
-    park.style.borderRadius = "8px";
-  }}
-  const doc = parentDoc();
-  if (!doc) return;
-  let park = doc.getElementById(PARK_ID);
-  if (!park) {{
-    park = doc.createElement("iframe");
-    park.id = PARK_ID;
-    park.title = "Live operations map";
-    doc.body.appendChild(park);
-  }}
-  if (payload) {{
-    park.srcdoc = decodeURIComponent(escape(atob(payload)));
-  }}
-  place(park);
-  const pwin = window.parent;
-  pwin.addEventListener("resize", function () {{ place(park); }});
-  pwin.addEventListener("scroll", function () {{ place(park); }}, true);
-  const iv = setInterval(function () {{ place(park); }}, 200);
-  setTimeout(function () {{ clearInterval(iv); }}, 5000);
-}})();
-</script>
-        """,
+        map_html,
         height=780,
         scrolling=False,
     )
     if rebuilt:
-        st.caption(f"Map rebuilt in {build_ms:.0f} ms (tick {tick}).")
+        st.caption(f"Map updated in {build_ms:.0f} ms (tick {tick}).")
     else:
-        st.caption(f"Map reused from cache (tick {tick}, 0 ms rebuild).")
+        st.caption(f"Map cached (tick {tick}).")
 
 
 @st.fragment(key="live_tick_map")
@@ -1208,22 +1143,7 @@ def _live_ops_panel(header_slot, kpi_slot, map_feed_slot=None, explain_slot=None
                 )
                 choice = st.session_state.get("map_style_choice", "🌌 Esri Dark Nautical Canvas")
                 map_html, rebuilt, build_ms = _get_cached_live_folium_map(live, choice)
-                if rebuilt:
-                    with st.spinner("Rebuilding live map (~2,000 vessels)…"):
-                        _show_live_map(map_html, True, live.get("tick"), build_ms)
-                else:
-                    # Do not remount a components.html iframe — that re-parses Leaflet
-                    # and was ~10s even when Python rebuild was 0 ms. The parent-parked
-                    # map iframe from the last rebuild stays on screen.
-                    st.markdown(
-                        '<div id="mas-map-slot" style="height:780px;width:100%;background:#0b1220;border-radius:8px;"></div>',
-                        unsafe_allow_html=True,
-                    )
-                    st.caption(
-                        f"Map reused from cache (tick {live.get('tick')}, 0 ms rebuild). "
-                        f"frag-runs {st.session_state.get('_frag_runs')} · "
-                        f"main-script-runs {st.session_state.get('_main_script_runs')}"
-                    )
+                _show_live_map(map_html, rebuilt, live.get("tick"), build_ms)
                 route = live.get("current_route") or {}
                 if route:
                     bl_cost = route.get("baseline_cost", 0)

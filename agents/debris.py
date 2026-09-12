@@ -29,7 +29,7 @@ from sklearn.cluster import DBSCAN
 
 logger = logging.getLogger(__name__)
 
-BBOX = {"lat_min": 27.0, "lat_max": 30.0, "lon_min": -95.0, "lon_max": -88.0}
+BBOX = {"lat_min": -40.0, "lat_max": 60.0, "lon_min": -180.0, "lon_max": 180.0}
 DEBRIS_TYPES = ["Plastic", "Derelict Gear", "Foam", "Metal", "Rope", "Mixed"]
 
 # DBSCAN parameters (degrees ≈ km at these latitudes)
@@ -54,10 +54,14 @@ def _haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 #  Collector vessels                                                           #
 # --------------------------------------------------------------------------- #
 COLLECTOR_START_POSITIONS = [
-    (29.5, -94.8, "CC-01"),   # near Galveston/Houston
-    (29.9, -90.1, "CC-02"),   # near New Orleans
-    (28.0, -92.5, "CC-03"),   # offshore Louisiana shelf
-    (27.8, -97.1, "CC-04"),   # near Corpus Christi
+    (29.5, -94.8, "CC-01"),
+    (29.9, -90.1, "CC-02"),
+    (51.0, 1.5, "CC-03"),
+    (36.1, -5.4, "CC-04"),
+    (30.0, 32.5, "CC-05"),
+    (1.3, 103.8, "CC-06"),
+    (35.5, 139.8, "CC-07"),
+    (8.9, -79.5, "CC-08"),
 ]
 
 

@@ -7,11 +7,11 @@ Integrates:
   1. Open-Meteo Marine API — live wave height, wind speed/direction, ocean currents (REAL data).
   2. NOAA HURDAT2 Hurricane Ida (Aug 26-29, 2021) — real storm track data passing through Gulf bounding box (REAL historical data).
   3. Global Fishing Watch (GFW) — active fishing effort polygons / EEZ zones in Gulf shelf (REAL spatial reference data).
-  4. Multi-day AIS vessel tracks (50 vessels across 72 hours on Gulf shipping lanes) (SYNTHETIC fallback matching NOAA Marine Cadastre schema).
+  4. Multi-day AIS vessel tracks (~2000 vessels on global shipping lanes) (SYNTHETIC fallback matching NOAA Marine Cadastre schema).
   5. NOAA Marine Debris Program survey seed points (SYNTHETIC coastal debris data).
 
 DATA STATUS (runtime-populated):
-  AIS            -> SYNTHETIC (Multi-day, 50 vessels, 72h window)
+  AIS            -> SYNTHETIC (Multi-day, ~2000 vessels, global lanes)
   WEATHER        -> REAL (Open-Meteo Marine API with grid interpolation)
   STORM_TRACK    -> REAL HISTORICAL (NOAA HURDAT2: Hurricane Ida, Aug 2021)
   FISHING_ZONES  -> REAL SPATIAL (Global Fishing Watch Gulf EEZ & Delta Shelf)
@@ -30,34 +30,67 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-# Bounding box — Gulf of Mexico / US Gulf Coast Marine Waters
-BBOX = {"lat_min": 27.0, "lat_max": 29.25, "lon_min": -95.0, "lon_max": -88.5}
+# Gulf box — storm replay, GFW overlays, Agent 1 dense grid
+BBOX = {"lat_min": 25.0, "lat_max": 31.0, "lon_min": -97.0, "lon_max": -82.0}
+# Coarse marine weather field for global AIS / planner
+WEATHER_BBOX = {"lat_min": -40.0, "lat_max": 60.0, "lon_min": -180.0, "lon_max": 180.0}
 
 SIM_START = datetime(2026, 9, 12, 0, 0, 0)
 DATA_STATUS: dict[str, str] = {}
 
 # --------------------------------------------------------------------------- #
-#  1. AIS Tracks (Multi-day, 50 vessels, realistic shipping lanes)            #
+#  1. AIS Tracks (multi-day, ~200 vessels, realistic shipping lanes)          #
 # --------------------------------------------------------------------------- #
 SHIPPING_LANES = [
-    (27.8, -97.2, 29.2, -90.0, "CARGO"),        # Corpus Christi → Delta Shelf
-    (29.3, -94.7, 28.2, -89.5, "TANKER"),       # Galveston Entrance → Offshore Deep
-    (28.0, -94.0, 29.0, -89.8, "CARGO"),        # Mid-shelf → Louisiana Outer Approach
-    (27.5, -96.8, 29.2, -93.6, "TANKER"),       # South TX → Sabine Offshore Channel
-    (29.2, -93.8, 28.0, -88.6, "CARGO"),        # Sabine Offshore → Deep Gulf Exit
-    (29.1, -90.8, 27.8, -92.2, "FISHING"),      # Louisiana Outer Coast → Pelagic Fishing Grounds
-    (27.6, -96.2, 28.6, -90.8, "CARGO"),        # Deep Gulf Shipping Lane 1
-    (28.8, -95.2, 28.2, -89.8, "TANKER"),       # Mid-Gulf Transit Lane 2
-    (28.2, -95.0, 29.0, -89.4, "PATROL"),       # USCG Offshore Patrol
-    (29.2, -94.2, 28.4, -92.8, "TUG"),          # Rig Supply Tug Route
+    # Gulf of Mexico (kept so Agent 1's Galveston–NOLA corridor still has traffic)
+    (27.8, -97.2, 29.2, -90.0, "CARGO"),
+    (29.3, -94.7, 28.2, -89.5, "TANKER"),
+    (29.2, -93.8, 28.0, -88.6, "CARGO"),
+    (27.95, -82.55, 28.4, -88.0, "TANKER"),
+    (30.65, -88.05, 28.2, -87.5, "CARGO"),
+    # North Atlantic
+    (40.7, -74.0, 50.9, -1.4, "CARGO"),          # New York → English Channel
+    (36.1, -5.4, 40.7, -74.0, "TANKER"),         # Gibraltar → New York
+    (51.5, 0.0, 40.6, -73.9, "CARGO"),           # Thames → New York
+    (48.4, -4.5, 38.7, -9.1, "TANKER"),          # Brest → Lisbon approaches
+    (44.4, -63.6, 51.9, -10.5, "CARGO"),         # Halifax → SW Ireland
+    (10.4, -75.5, 36.0, -5.5, "CARGO"),          # Cartagena CO → Gibraltar
+    # Mediterranean / Suez / Red Sea
+    (36.1, -5.4, 35.9, 14.5, "CARGO"),           # Gibraltar → Malta
+    (35.9, 14.5, 31.2, 32.3, "TANKER"),          # Malta → Port Said
+    (31.2, 32.3, 29.9, 32.5, "CARGO"),           # Suez Canal corridor
+    (29.9, 32.5, 12.6, 43.3, "TANKER"),          # Suez → Bab-el-Mandeb
+    (12.6, 43.3, 25.0, 56.5, "CARGO"),           # Red Sea exit → Gulf of Oman
+    (41.0, 29.0, 35.8, 14.5, "CARGO"),           # Bosporus → Malta
+    (43.3, 5.3, 41.1, 16.9, "TANKER"),           # Marseille → Bari approaches
+    # Indian Ocean
+    (12.6, 43.3, 19.1, 72.8, "CARGO"),           # Aden → Mumbai
+    (1.3, 103.8, 6.9, 79.9, "TANKER"),           # Singapore → Colombo
+    (1.3, 103.8, -33.9, 18.4, "CARGO"),          # Singapore → Cape Town
+    (-29.9, 31.0, 12.6, 43.3, "TANKER"),         # Durban → Aden
+    (25.3, 55.3, 1.3, 103.8, "CARGO"),           # Dubai → Singapore
+    # Pacific
+    (1.3, 103.8, 22.3, 114.2, "CARGO"),          # Singapore → Hong Kong
+    (31.2, 121.5, 35.4, 139.8, "TANKER"),        # Shanghai → Tokyo approaches
+    (35.4, 139.8, 33.7, -118.3, "CARGO"),        # Japan → Los Angeles (great-circle sample)
+    (22.3, 114.2, 37.8, -122.4, "CARGO"),        # Hong Kong → San Francisco
+    (1.3, 103.8, -33.9, 151.2, "TANKER"),        # Singapore → Sydney
+    (8.9, -79.5, 8.6, -83.0, "CARGO"),           # Panama Canal approaches
+    (8.9, -79.5, 32.7, -117.2, "TANKER"),        # Panama → San Diego
+    (8.9, -79.5, -12.0, -77.1, "CARGO"),         # Panama → Callao
+    # West Africa / Cape
+    (5.6, 0.0, -33.9, 18.4, "TANKER"),           # Tema → Cape Town
+    (14.7, -17.4, 36.1, -5.4, "CARGO"),          # Dakar → Gibraltar
+    (-34.9, 19.8, 12.6, 43.3, "CARGO"),          # Cape Agulhas → Aden
+    (29.2, -94.8, 8.9, -79.5, "TANKER"),         # Gulf → Panama
 ]
 
 def _jitter(val: float, sigma: float = 0.04) -> float:
     return val + random.gauss(0, sigma)
 
-def generate_ais(n_vessels: int = 50, n_hours: int = 24, pings_per_hour: int = 6) -> pd.DataFrame:
+def generate_ais(n_vessels: int = 2000, n_hours: int = 12, pings_per_hour: int = 3) -> pd.DataFrame:
     """
-    Multi-day AIS track generator.
+    Global AIS track generator.
     Schema: vessel_id, vessel_type, timestamp, lat, lon, speed, heading
     """
     random.seed(42)
@@ -72,8 +105,6 @@ def generate_ais(n_vessels: int = 50, n_hours: int = 24, pings_per_hour: int = 6
         cur_lat = s_lat + frac_start * (e_lat - s_lat) + random.gauss(0, 0.08)
         cur_lon = s_lon + frac_start * (e_lon - s_lon) + random.gauss(0, 0.08)
         base_speed = {"CARGO": 14.5, "TANKER": 11.2, "FISHING": 6.8, "PATROL": 18.0, "TUG": 9.5}[vtype]
-        
-        # Motion vector
         d_lat = (e_lat - s_lat) / (n_hours * pings_per_hour)
         d_lon = (e_lon - s_lon) / (n_hours * pings_per_hour)
         heading = math.degrees(math.atan2(e_lon - s_lon, e_lat - s_lat)) % 360
@@ -82,11 +113,11 @@ def generate_ais(n_vessels: int = 50, n_hours: int = 24, pings_per_hour: int = 6
             ts = SIM_START + timedelta(minutes=step * (60 // pings_per_hour))
             rows.append(
                 {
-                    "vessel_id": f"V{vid:03d}",
+                    "vessel_id": f"V{vid:04d}",
                     "vessel_type": vtype,
                     "timestamp": ts,
-                    "lat": round(_jitter(cur_lat, 0.02), 5),
-                    "lon": round(_jitter(cur_lon, 0.02), 5),
+                    "lat": round(min(70.0, max(-50.0, _jitter(cur_lat, 0.04))), 5),
+                    "lon": round(_jitter(cur_lon, 0.04), 5),
                     "speed": round(max(0, random.gauss(base_speed, 1.2)), 1),
                     "heading": round((heading + random.gauss(0, 3)) % 360, 1),
                 }
@@ -98,7 +129,7 @@ def generate_ais(n_vessels: int = 50, n_hours: int = 24, pings_per_hour: int = 6
     df["timestamp"] = pd.to_datetime(df["timestamp"])
     df.sort_values(["vessel_id", "timestamp"], inplace=True)
     df.reset_index(drop=True, inplace=True)
-    DATA_STATUS["AIS"] = "SYNTHETIC (Multi-day, 50 vessels, 24h density window)"
+    DATA_STATUS["AIS"] = f"SYNTHETIC (Global lanes, {n_vessels} vessels, {n_hours}h window)"
     return df
 
 # --------------------------------------------------------------------------- #
@@ -121,12 +152,12 @@ def _fetch_openmeteo(lat: float, lon: float) -> dict | None:
     except Exception:
         return None
 
-def load_weather(grid_step: float = 0.4) -> pd.DataFrame:
-    lats = np.arange(BBOX["lat_min"], BBOX["lat_max"] + grid_step, grid_step)
-    lons = np.arange(BBOX["lon_min"], BBOX["lon_max"] + grid_step, grid_step)
+def load_weather(grid_step: float = 10.0) -> pd.DataFrame:
+    lats = np.arange(WEATHER_BBOX["lat_min"], WEATHER_BBOX["lat_max"] + grid_step, grid_step)
+    lons = np.arange(WEATHER_BBOX["lon_min"], WEATHER_BBOX["lon_max"] + grid_step, grid_step)
 
-    centre_lat = (BBOX["lat_min"] + BBOX["lat_max"]) / 2
-    centre_lon = (BBOX["lon_min"] + BBOX["lon_max"]) / 2
+    centre_lat = 28.0
+    centre_lon = -30.0
 
     real_data = _fetch_openmeteo(centre_lat, centre_lon)
     rows = []
@@ -235,13 +266,23 @@ def load_fishing_zones() -> list[dict]:
 # --------------------------------------------------------------------------- #
 DEBRIS_TYPES = ["Plastic", "Derelict Gear", "Foam", "Metal", "Rope", "Mixed"]
 
-def load_debris(n_seeds: int = 25) -> pd.DataFrame:
+def load_debris(n_seeds: int = 80) -> pd.DataFrame:
     random.seed(7)
-    coast_lat_max = 29.15
+    clusters = [
+        (29.0, -90.0),
+        (36.0, -5.5),
+        (31.0, 32.4),
+        (1.4, 103.8),
+        (34.0, 139.0),
+        (9.0, -79.5),
+        (51.0, 1.5),
+        (-34.0, 18.5),
+    ]
     rows = []
     for i in range(n_seeds):
-        lat = random.uniform(BBOX["lat_min"], coast_lat_max)
-        lon = random.uniform(BBOX["lon_min"], BBOX["lon_max"])
+        clat, clon = clusters[i % len(clusters)]
+        lat = clat + random.gauss(0, 0.8)
+        lon = clon + random.gauss(0, 0.8)
         rows.append(
             {
                 "debris_id": f"D{i:03d}",
@@ -252,7 +293,7 @@ def load_debris(n_seeds: int = 25) -> pd.DataFrame:
                 "severity": random.choice(["Low", "Medium", "High"]),
             }
         )
-    DATA_STATUS["DEBRIS"] = "SYNTHETIC (NOAA Debris Survey Schema, 25 coastal points)"
+    DATA_STATUS["DEBRIS"] = f"SYNTHETIC (NOAA Debris Survey Schema, {n_seeds} coastal points)"
     df = pd.DataFrame(rows)
     return df
 

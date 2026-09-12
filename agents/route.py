@@ -27,11 +27,11 @@ import networkx as nx
 
 logger = logging.getLogger(__name__)
 
-# Bounding box — must match data/loader.py
-BBOX = {"lat_min": 27.0, "lat_max": 30.0, "lon_min": -95.0, "lon_max": -88.0}
+# Bounding box — must match data/loader.py (Texas through Florida Gulf Coast)
+BBOX = {"lat_min": 25.0, "lat_max": 31.0, "lon_min": -97.0, "lon_max": -82.0}
 
-# Grid resolution (degrees).  0.25° ≈ 27 km — keeps the graph small.
-GRID_STEP = 0.25
+# Grid resolution (degrees).  0.35° keeps A* responsive over the larger box.
+GRID_STEP = 0.35
 
 # Cost multipliers
 WAVE_PENALTY_FACTOR = 1.8   # 1 m wave adds this fraction of base cost
@@ -86,22 +86,29 @@ def _nearest_weather(weather_df: pd.DataFrame, lat: float, lon: float) -> dict:
 # --------------------------------------------------------------------------- #
 def _is_navigable_water(lat: float, lon: float) -> bool:
     """
-    Returns True if (lat, lon) is in open marine waters of the Gulf of Mexico.
-    Strictly excludes all Louisiana and Texas land masses.
+    True if (lat, lon) is south of a piecewise Gulf Coast shoreline cap.
+    Excludes inland Texas, Louisiana, and Florida land while covering
+    open water from Brownsville to Tampa Bay.
     """
-    # Strict latitude cap for Louisiana coastline
-    if lat > 29.25:
-        return False
-    # Central/Western Louisiana coastline boundary
-    if lon > -94.5 and lon <= -91.0 and lat > 29.20:
-        return False
-    # Atchafalaya & Terrebonne Bay boundary
-    if lon > -91.0 and lon <= -89.0 and lat > 29.15:
-        return False
-    # Inland Texas north of Galveston Entrance
-    if lon <= -94.5 and lat > 29.35:
-        return False
-    return True
+    if lon <= -96.5:
+        coast = 26.5
+    elif lon <= -95.2:
+        coast = 28.4
+    elif lon <= -94.2:
+        coast = 29.40
+    elif lon <= -91.5:
+        coast = 29.30
+    elif lon <= -89.2:
+        coast = 29.25
+    elif lon <= -87.8:
+        coast = 30.35
+    elif lon <= -85.5:
+        coast = 30.25
+    elif lon <= -83.8:
+        coast = 29.6
+    else:
+        coast = 28.0
+    return lat <= coast
 
 
 # --------------------------------------------------------------------------- #
@@ -146,9 +153,24 @@ def _snap_to_grid(lat: float, lon: float) -> tuple[float, float]:
     """Snap an arbitrary (lat, lon) to the nearest navigable grid node."""
     snapped_lat = round(round(lat / GRID_STEP) * GRID_STEP, 4)
     snapped_lon = round(round(lon / GRID_STEP) * GRID_STEP, 4)
-    snapped_lat = max(BBOX["lat_min"], min(29.35, snapped_lat))
+    snapped_lat = max(BBOX["lat_min"], min(BBOX["lat_max"], snapped_lat))
     snapped_lon = max(BBOX["lon_min"], min(BBOX["lon_max"], snapped_lon))
-    return snapped_lat, snapped_lon
+    if _is_navigable_water(snapped_lat, snapped_lon):
+        return snapped_lat, snapped_lon
+    best = (snapped_lat, snapped_lon)
+    best_d = float("inf")
+    lats = np.arange(BBOX["lat_min"], BBOX["lat_max"] + GRID_STEP, GRID_STEP)
+    lons = np.arange(BBOX["lon_min"], BBOX["lon_max"] + GRID_STEP, GRID_STEP)
+    for la in lats:
+        for lo in lons:
+            rla, rlo = round(float(la), 4), round(float(lo), 4)
+            if not _is_navigable_water(rla, rlo):
+                continue
+            d = (rla - lat) ** 2 + (rlo - lon) ** 2
+            if d < best_d:
+                best_d = d
+                best = (rla, rlo)
+    return best
 
 
 # --------------------------------------------------------------------------- #
@@ -177,20 +199,23 @@ def get_route(
     -------
     dict with keys:
         waypoints        : list of [lat, lon]
-        cost             : total route cost (weighted distance units)
-        baseline_cost    : straight-line cost between origin and destination
-        savings_pct      : percentage cost reduction vs straight line
+        cost             : weather-aware A* path cost
+        baseline_cost    : weather cost of the shortest-distance path on the same graph
+        savings_pct      : percent fuel-cost reduction vs that distance-only path
+        naive_waypoints  : shortest-distance path
         graph_node_count : for debugging
     """
     G, nodes = _build_graph(weather_df)
 
-    # Apply extra cost around flagged vessel positions
     if extra_cost_nodes:
-        for bad_node in extra_cost_nodes:
-            if bad_node in G:
-                for nbr in G.neighbors(bad_node):
-                    if G.has_edge(bad_node, nbr):
-                        G[bad_node][nbr]["weight"] *= extra_cost_factor
+        radius_km = GRID_STEP * 111 * 1.5
+        for nd in list(G.nodes):
+            for bad_node in extra_cost_nodes:
+                if _haversine(nd[0], nd[1], bad_node[0], bad_node[1]) <= radius_km:
+                    for nbr in list(G.neighbors(nd)):
+                        if G.has_edge(nd, nbr):
+                            G[nd][nbr]["weight"] *= extra_cost_factor
+                    break
 
     o_snap = _snap_to_grid(*origin)
     d_snap = _snap_to_grid(*destination)
@@ -221,30 +246,22 @@ def get_route(
         path = [o_snap, d_snap]
         cost = _haversine(*o_snap, *d_snap)
 
-    # Straight-line baseline: sample weather at 10 points along the direct path
-    num_samples = 10
-    direct_dist = _haversine(*o_snap, *d_snap)
-    segment_dist = direct_dist / num_samples
-    bearing = _bearing(*o_snap, *d_snap)
-    
-    baseline_cost = 0.0
-    for i in range(num_samples):
-        frac = (i + 0.5) / num_samples
-        sample_lat = o_snap[0] + frac * (d_snap[0] - o_snap[0])
-        sample_lon = o_snap[1] + frac * (d_snap[1] - o_snap[1])
-        w = _nearest_weather(weather_df, sample_lat, sample_lon)
-        wave_pen = w["wave_height"] * WAVE_PENALTY_FACTOR * 0.15
-        wind_pen = max(0, _headwind_component(w["wind_speed"], w["wind_direction"], bearing)) * WIND_PENALTY_FACTOR * 0.02
-        baseline_cost += segment_dist * (1 + wave_pen + wind_pen)
+    # Honest baseline: shortest *distance* path on the same graph, then score
+    # that path with the weather-aware edge weights (fuel you would actually burn).
+    try:
+        naive_path = nx.astar_path(G, o_snap, d_snap, heuristic=heuristic, weight="dist_km")
+        baseline_cost = 0.0
+        for i in range(len(naive_path) - 1):
+            edge = G[naive_path[i]][naive_path[i + 1]]
+            baseline_cost += edge.get("weight", edge.get("dist_km", 0.0))
+    except nx.NetworkXNoPath:
+        naive_path = [o_snap, d_snap]
+        baseline_cost = cost
 
-    # Ensure baseline cost accounts for direct path weather impact
-    if baseline_cost < cost * 1.05:
-        # Give a realistic baseline cost relative to weather avoided
-        baseline_cost = cost * 1.14
-
-    savings_pct = max(0.0, (baseline_cost - cost) / baseline_cost * 100) if baseline_cost > 0 else 0.0
+    savings_pct = (baseline_cost - cost) / baseline_cost * 100 if baseline_cost > 0 else 0.0
 
     waypoints = [[float(n[0]), float(n[1])] for n in path]
+    naive_waypoints = [[float(n[0]), float(n[1])] for n in naive_path]
 
     logger.info(
         "Route: %d waypoints, cost=%.1f, baseline=%.1f, savings=%.1f%%",
@@ -252,6 +269,7 @@ def get_route(
     )
     return {
         "waypoints": waypoints,
+        "naive_waypoints": naive_waypoints,
         "cost": round(cost, 2),
         "baseline_cost": round(baseline_cost, 2),
         "savings_pct": round(savings_pct, 1),

@@ -1,0 +1,41 @@
+name,lat,lon,state,type
+Port of Houston,29.7355,-95.2706,TX,deepwater
+Port of Galveston,29.3090,-94.7930,TX,deepwater
+Port of Texas City,29.3780,-94.8910,TX,deepwater
+Port of Freeport,28.9540,-95.3090,TX,deepwater
+Port of Corpus Christi,27.8130,-97.3960,TX,deepwater
+Port of Brownsville,25.9570,-97.3960,TX,deepwater
+Port of Beaumont,30.0820,-94.0910,TX,deepwater
+Port of Port Arthur,29.8680,-93.9280,TX,deepwater
+Port of Lake Charles,30.1910,-93.2480,LA,deepwater
+Port of New Orleans,29.9350,-90.0620,LA,deepwater
+Port of South Louisiana,30.0480,-90.5680,LA,deepwater
+Port of Baton Rouge,30.4380,-91.1910,LA,river
+Port Fourchon,29.1060,-90.1940,LA,offshore support
+Port of Gulfport,30.3600,-89.0930,MS,deepwater
+Port of Pascagoula,30.3480,-88.5660,MS,deepwater
+Port of Mobile,30.6650,-88.0320,AL,deepwater
+Port of Pensacola,30.4040,-87.2130,FL,deepwater
+Port of Panama City,30.1580,-85.6930,FL,deepwater
+Port of Tampa,27.9450,-82.4460,FL,deepwater
+Port Manatee,27.6340,-82.5620,FL,deepwater
+Port of Miami,25.7785,-80.1795,FL,deepwater
+Port of New York and New Jersey,40.6681,-74.0459,NY,deepwater
+Port of Rotterdam,51.8850,4.2867,NL,deepwater
+Port of Antwerp,51.2700,4.3360,BE,deepwater
+Port of Singapore,1.2644,103.8198,SG,deepwater
+Port of Shanghai,31.3660,121.6140,CN,deepwater
+Port of Hong Kong,22.3089,114.1224,HK,deepwater
+Port of Busan,35.1030,129.0400,KR,deepwater
+Port of Tokyo,35.6210,139.7800,JP,deepwater
+Port of Los Angeles,33.7292,-118.2620,CA,deepwater
+Port of Long Beach,33.7542,-118.2165,CA,deepwater
+Port of Santos,-23.9810,-46.2930,BR,deepwater
+Port of Durban,-29.8690,31.0250,ZA,deepwater
+Port of Jebel Ali,24.9850,55.0270,AE,deepwater
+Port Said,31.2560,32.3010,EG,canal
+Port of Piraeus,37.9480,23.6370,GR,deepwater
+Port of Valencia,39.4450,-0.3180,ES,deepwater
+Port of Gibraltar,36.1370,-5.3580,GI,deepwater
+Port of Colombo,6.9410,79.8440,LK,deepwater
+Port of Panama City (Balboa),8.9570,-79.5660,PA,canal

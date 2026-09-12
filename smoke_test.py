@@ -63,7 +63,7 @@ route = check("get_route()", lambda: get_route(ORIGIN, DEST, weather_df))
 
 if route:
     check("Route has waypoints", lambda: len(route["waypoints"]) >= 2)
-    check("Savings >= 0", lambda: route["savings_pct"] >= 0)
+    check("Savings not a hardcoded 14% floor", lambda: abs(route["baseline_cost"] / route["cost"] - 1.14) > 0.001 if route["cost"] else True)
     print(f"  Waypoints: {len(route['waypoints'])}, savings: {route['savings_pct']:.1f}%")
 
 # ── 3. Dark vessel agent ───────────────────────────────────────────────────
@@ -76,8 +76,13 @@ dv_results = check("detect_dark_vessels()", lambda: detect_dark_vessels(ais_df))
 if dv_results:
     flagged = [r for r in dv_results if r["flagged"]]
     check("At least 1 vessel flagged", lambda: len(flagged) >= 1)
-    check("Explanation text present", lambda: len(flagged[0].get("explanation", "")) > 10)
-    print(f"  {len(flagged)}/{len(dv_results)} vessels flagged")
+    check("Precision and recall are not a perfect tautology", lambda: not (
+        abs(sum(1 for r in dv_results if r["flagged"] and r["is_ground_truth_dark"]) / max(1, sum(1 for r in dv_results if r["flagged"])) - 1.0) < 1e-9
+        and abs(sum(1 for r in dv_results if r["flagged"] and r["is_ground_truth_dark"]) / max(1, sum(1 for r in dv_results if r["is_ground_truth_dark"])) - 1.0) < 1e-9
+        and sum(1 for r in dv_results if r["flagged"]) == sum(1 for r in dv_results if r["is_ground_truth_dark"])
+    ))
+    from agents.dark_vessel import DARK_FRACTION, IF_CONTAMINATION
+    check("Detector contamination prior != GT dark fraction", lambda: IF_CONTAMINATION != DARK_FRACTION)
 
 # ── 4. Debris agent ────────────────────────────────────────────────────────
 print("\n=== Agent 3: Debris Coordination ===")

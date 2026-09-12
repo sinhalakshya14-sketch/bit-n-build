@@ -114,7 +114,7 @@ def _dispatch(name: str, args: dict) -> Any:
 
 
 def llm_configured() -> bool:
-    return False
+    return bool(os.getenv("ANTHROPIC_API_KEY"))
 
 
 def investigate_vessel(vessel: dict[str, Any], *, use_llm: bool = True) -> dict[str, Any]:

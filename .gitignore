@@ -3,3 +3,4 @@ __pycache__/
 .system_generated/
 *.log
 .venv/
+.freebuff/

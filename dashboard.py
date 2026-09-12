@@ -1,3 +1,4 @@
+
 """
 dashboard.py
 ============
@@ -17,6 +18,8 @@ Features:
 Run:
   python -m streamlit run dashboard.py
 """
+from dotenv import load_dotenv
+load_dotenv(override=True)
 
 import time
 import sys
@@ -290,8 +293,6 @@ if "initialised" not in st.session_state:
     st.session_state.planner_origin = "Port of Houston"
     st.session_state.planner_dest = "Port of Tampa"
     st.session_state.nav_view = NAV_LIVE
-    if "search_focus_vessel" not in st.session_state:
-        st.session_state.search_focus_vessel = None
     if "active_search_vessel" not in st.session_state:
         st.session_state.active_search_vessel = None
 
@@ -334,6 +335,7 @@ def _apply_basemap(folium_map, choice: str) -> None:
         ).add_to(folium_map)
     elif "Dark" in choice:
         folium.TileLayer(
+<<<<<<< Updated upstream
             tiles="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
             attr="Esri World Dark Gray Canvas",
             name="Esri Dark Nautical Canvas",
@@ -345,6 +347,11 @@ def _apply_basemap(folium_map, choice: str) -> None:
             tiles="https://services.arcgisonline.com/arcgis/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}",
             attr="Esri Ocean Basemap",
             name="Esri Ocean Bathymetry",
+=======
+            tiles="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+            attr="CartoDB Positron",
+            name="MarineTraffic Light Nautical",
+>>>>>>> Stashed changes
             overlay=False,
             control=True,
         ).add_to(folium_map)
@@ -541,6 +548,7 @@ def _render_event_feed(state: dict) -> None:
         )
 
 
+<<<<<<< Updated upstream
 def _render_single_explain_card(fv: dict, analyst: str, watched_ids: set, state: dict, key_prefix: str = "") -> None:
     vid = fv["vessel_id"]
     on_watch = vid in watched_ids
@@ -671,6 +679,8 @@ def _render_flag_explain(state: dict) -> None:
         if len(flagged) > 12:
             st.caption(f"Showing top 12 of {len(flagged)} flagged vessels by confidence.")
 
+=======
+>>>>>>> Stashed changes
 
 def _render_watchlist_panel(state: dict) -> None:
     analyst = _current_analyst()
@@ -767,7 +777,7 @@ def _gfw_zone_key(zones: list) -> tuple:
 
 def _build_live_folium_map(state: dict, choice: str):
     """Dynamic live-map layers on a canvas-backed Folium map."""
-    focus_vid = st.session_state.get("search_focus_vessel")
+    focus_vid = st.session_state.get("active_search_vessel")
     center = GULF_CENTER
     zoom = GULF_ZOOM
     if focus_vid:
@@ -776,7 +786,6 @@ def _build_live_folium_map(state: dict, choice: str):
                 center = (v["lat"], v["lon"])
                 zoom = 10
                 break
-        st.session_state["search_focus_vessel"] = None
 
     folium_map = _new_gulf_map(choice, center=center, zoom=zoom)
 
@@ -951,6 +960,21 @@ def _build_live_folium_map(state: dict, choice: str):
                 popup=folium.Popup(f"<b>Vessel {vid}</b><br/>Search Target", max_width=280),
                 z_index_offset=1000,
             ).add_to(folium_map)
+            
+            # Draw dashed purple line from origin to destination
+            v_origin = state.get("vessel_origins", {}).get(vid)
+            if v_origin:
+                v_dest_dict = orchestrator.get_vessel_origin_dest(vid).get("dest", {})
+                if v_dest_dict and v_dest_dict.get("lat") and v_dest_dict.get("lon"):
+                    v_dest = (float(v_dest_dict["lat"]), float(v_dest_dict["lon"]))
+                    folium.PolyLine(
+                        locations=[[v_origin[0], v_origin[1]], [v_dest[0], v_dest[1]]],
+                        color="purple",
+                        weight=3,
+                        dash_array="5, 10",
+                        opacity=0.8,
+                        popup="Searched Vessel Origin → Destination",
+                    ).add_to(folium_map)
 
         if not is_flagged:
             active_features.append(
@@ -1038,7 +1062,6 @@ def _live_map_cache_key(state: dict, choice: str) -> tuple:
         bool(st.session_state.get("show_before_after")),
         bool(st.session_state.get("show_debris_zones", True)),
         bool(state.get("storm_mode_active")),
-        st.session_state.get("search_focus_vessel"),
         st.session_state.get("active_search_vessel"),
     )
 
@@ -1124,7 +1147,55 @@ def _live_ops_panel(header_slot, kpi_slot, map_feed_slot=None, explain_slot=None
                     if submit_search and search_vid:
                         st.session_state["search_focus_vessel"] = search_vid
                         st.session_state["active_search_vessel"] = search_vid
+                        from agents.investigator import generate_vessel_brief
+                        with st.spinner("Generating investigative brief..."):
+                            brief = generate_vessel_brief(search_vid, live)
+                            st.session_state["active_search_brief"] = brief
+
+                active_search = st.session_state.get("active_search_vessel")
+                brief = st.session_state.get("active_search_brief")
+                if active_search and brief and str(brief.get("vessel_id")) == str(active_search):
+                    st.markdown(f"##### 🔍 Investigative Brief: {active_search}")
+                    if brief.get("error"):
+                        st.error(brief["error"])
+                    else:
+                        if brief.get("is_flagged"):
+                            fv = live.get("detection_by_id", {}).get(active_search, {})
+                            conf = fv.get("confidence", 0)
+                            max_g = fv.get("max_gap_minutes", 0)
+                            disp = fv.get("displacement_error_km", 0)
+                            spd = fv.get("speed_change_after_gap", 0)
+                            hdg = fv.get("heading_change_after_gap", 0)
+                            
+                            st.error(f"**🚨 Flagged Dark Vessel** (Confidence: {conf:.0%})")
+                            st.markdown(
+                                f"<div style='font-size:0.8rem; margin-bottom:10px;'>"
+                                f"<b>Gap:</b> {max_g} min | <b>DR Error:</b> {disp} km | "
+                                f"<b>Speed Δ:</b> {spd} kts | <b>Heading Δ:</b> {hdg}°"
+                                f"</div>",
+                                unsafe_allow_html=True
+                            )
+                        else:
+                            st.success("✅ Normal operating vessel")
+                            
+                        st.markdown(f"**Summary:** {brief.get('summary')}")
+                        with st.expander("View Tool Trace"):
+                            for call in brief.get("tool_calls", []):
+                                st.markdown(f"**Tool:** `{call.get('tool')}`")
+                                st.json({"input": call.get("input"), "result": call.get("result")})
                         
+                        analyst = _current_analyst()
+                        if analyst:
+                            watched_ids = {r["vessel_id"] for r in storage.get_watchlist(analyst)}
+                            if active_search in watched_ids:
+                                st.button("✓ On Watchlist", key=f"wl_on_inline_{active_search}", on_click=_watchlist_remove, args=(active_search,))
+                            else:
+                                st.button("⭐ Add to Watchlist", key=f"wl_add_inline_{active_search}", on_click=_watchlist_add, args=(active_search,))
+                        else:
+                            st.info("Enter your Analyst Name below to use the Watchlist.")
+                        
+                        st.markdown("<br/>", unsafe_allow_html=True)
+                
                 st.markdown(
                     """
                     <div class="legend-bar">
@@ -1145,7 +1216,48 @@ def _live_ops_panel(header_slot, kpi_slot, map_feed_slot=None, explain_slot=None
                 map_html, rebuilt, build_ms = _get_cached_live_folium_map(live, choice)
                 _show_live_map(map_html, rebuilt, live.get("tick"), build_ms)
                 route = live.get("current_route") or {}
-                if route:
+                if active_search and brief and not brief.get("error"):
+                    # Show vessel-specific route info
+                    v = next((x for x in live.get("vessel_positions", []) if x["vessel_id"] == active_search), None)
+                    if v:
+                        v_origin = live.get("vessel_origins", {}).get(active_search)
+                        v_dest_dict = orchestrator.get_vessel_origin_dest(active_search).get("dest", {})
+                        if v_origin and v_dest_dict and v_dest_dict.get("lat") and v_dest_dict.get("lon"):
+                            v_dest = (float(v_dest_dict["lat"]), float(v_dest_dict["lon"]))
+                            
+                            # Cache the route computation for this vessel
+                            v_route_key = f"route_{active_search}"
+                            if v_route_key not in st.session_state:
+                                st.session_state[v_route_key] = get_route(v_origin, v_dest, live.get("weather_df"))
+                            
+                            v_route = st.session_state.get(v_route_key, {})
+                            bl_cost = v_route.get("baseline_cost", 0)
+                            opt_cost = v_route.get("cost", 0)
+                            sav = v_route.get("savings_pct", 0)
+                            
+                            current_pos = (v["lat"], v["lon"])
+                            from agents.investigator import _haversine
+                            dist_rem_km = _haversine(current_pos[0], current_pos[1], v_dest[0], v_dest[1])
+                            dist_rem_nm = dist_rem_km / 1.852
+                            speed = v.get("speed", 0.1)
+                            speed = speed if speed > 0 else 0.1
+                            eta_hrs = dist_rem_nm / speed
+                            
+                            status_str = f"<span style='color:#ef4444'>FLAGGED</span>" if v.get("flagged") else f"<span style='color:#34d399'>NORMAL</span>"
+                            dest_name = v_dest_dict.get('name', 'Unknown')
+                            
+                            st.markdown(
+                                f"""
+                                <div class="route-bar">
+                                  <div>🧭 <b>{active_search} Corridor:</b> Origin ({v_origin[0]:.2f}, {v_origin[1]:.2f}) &nbsp;➔&nbsp; {dest_name} ({v_dest[0]:.2f}, {v_dest[1]:.2f})</div>
+                                  <div><b>Pos:</b> {current_pos[0]:.2f}, {current_pos[1]:.2f} &nbsp;·&nbsp; <b>Spd:</b> {v.get('speed', 0)} kts &nbsp;·&nbsp; <b>Hdg:</b> {v.get('heading', 0)}° &nbsp;·&nbsp; <b>Status:</b> {status_str}</div>
+                                  <div><b>Dist Rem:</b> {dist_rem_nm:.1f} nm &nbsp;·&nbsp; <b>ETA:</b> {eta_hrs:.1f} hrs</div>
+                                  <div><b>Fuel saved:</b> <span style="color:#34d399;font-weight:700">{sav:.1f}%</span> (Naive: {bl_cost:.1f} · Opt: {opt_cost:.1f})</div>
+                                </div>
+                                """,
+                                unsafe_allow_html=True,
+                            )
+                elif route:
                     bl_cost = route.get("baseline_cost", 0)
                     opt_cost = route.get("cost", 0)
                     sav = route.get("savings_pct", 0)
@@ -1166,7 +1278,6 @@ def _live_ops_panel(header_slot, kpi_slot, map_feed_slot=None, explain_slot=None
         with explain_slot:
             _render_analyst_watchlist_bar()
             _render_watchlist_panel(live)
-            _render_flag_explain(live)
     _frag_ms = (time.perf_counter() - _frag_t0) * 1000.0
     try:
         with open(

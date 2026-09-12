@@ -5,3 +5,4 @@ __pycache__/
 .venv/
 .freebuff/
 watchlist.db
+.env

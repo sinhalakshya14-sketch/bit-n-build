@@ -521,7 +521,9 @@ def initialise() -> None:
     # Vessel playback tracks + seed wakes
     _state["tracks"] = _build_tracks(ais_df)
     _state["vessel_positions"] = _vessel_state_at_tick(0)
+    _state["vessel_origins"] = {}
     for v in _state["vessel_positions"]:
+        _state["vessel_origins"][v["vessel_id"]] = (v["lat"], v["lon"])
         track = _state["tracks"][v["vessel_id"]]
         idx = 0 % len(track)
         _state["vessel_wakes"][v["vessel_id"]] = [
@@ -576,8 +578,13 @@ def tick() -> None:
     # Vessels advance along their AIS tracks; wake trails updated
     vpos = _vessel_state_at_tick(t)
     _state["vessel_positions"] = vpos
+    if "vessel_origins" not in _state:
+        _state["vessel_origins"] = {}
     for v in vpos:
-        wake = _state["vessel_wakes"].setdefault(v["vessel_id"], [])
+        vid = v["vessel_id"]
+        if vid not in _state["vessel_origins"]:
+            _state["vessel_origins"][vid] = (v["lat"], v["lon"])
+        wake = _state["vessel_wakes"].setdefault(vid, [])
         wake.append([v["lat"], v["lon"]])
         del wake[:-WAKE_LENGTH]
 
@@ -653,6 +660,7 @@ def get_state() -> dict[str, Any]:
         "llm_enabled": bool(_state.get("llm_enabled")),
         "llm_briefs": dict(_state.get("llm_briefs") or {}),
         "detection_thresholds": dict(_state.get("detection_thresholds") or {}),
+        "vessel_origins": dict(_state.get("vessel_origins") or {}),
     }
 
 

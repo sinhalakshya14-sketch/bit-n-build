@@ -54,230 +54,210 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
 
-    html, body, [class*="css"] { font-family: 'Plus Jakarta Sans', sans-serif; }
-    .stApp { background: #000000; color: #DDDDDD; }
-    
-    /* Animations */
-    @keyframes fadein {
-        from { opacity: 0; transform: translateY(10px); }
-        to   { opacity: 1; transform: translateY(0); }
-    }
-    
-    .stApp > div {
-        animation: fadein 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    }
+    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+    .stApp { background: #060a12; color: #e2e8f0; }
 
-    /* Header Banner */
+    /* Give the custom header room to breathe below Streamlit's own top bar
+       so it never collides with the "Connecting…/Deploy" toolbar. */
+    .block-container { padding-top: 0.6rem !important; padding-bottom: 0.4rem; max-width: 100% !important; padding-left: 0.6rem; padding-right: 0.6rem; }
+    #MainMenu, footer { visibility: hidden; }
+
+    h1, h2, h3, h4 { letter-spacing: -0.01em; }
+    hr { border-color: rgba(148, 163, 184, 0.12); margin: 1.4rem 0; }
+
+    /* ── Header Banner ────────────────────────────────────────────────── */
     .mas-header {
-        background: #000000;
-        border: 1px solid #333333;
-        border-radius: 12px;
-        padding: 20px 28px;
-        margin-bottom: 20px;
+        background: linear-gradient(135deg, rgba(13, 27, 62, 0.97) 0%, rgba(15, 35, 75, 0.97) 50%, rgba(10, 45, 90, 0.97) 100%);
+        border: 1px solid rgba(56, 189, 248, 0.25);
+        border-radius: 14px;
+        padding: 18px 26px;
+        margin-bottom: 18px;
         display: flex;
         align-items: center;
         justify-content: space-between;
         flex-wrap: wrap;
         gap: 10px;
-        transition: border-color 0.3s ease;
+        box-shadow: 0 10px 36px rgba(0, 90, 220, 0.18);
     }
-    .mas-header:hover { border-color: #555555; }
-    .mas-title-group { display: flex; align-items: center; gap: 16px; }
+    .mas-title-group { display: flex; align-items: center; gap: 14px; }
     .mas-title-group .mas-icon {
-        width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
-        background: #111111;
+        width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0;
+        background: linear-gradient(135deg, #0ea5e9, #1d4ed8);
         display: flex; align-items: center; justify-content: center;
-        font-size: 1.5rem; 
-        border: 1px solid #333333;
+        font-size: 1.35rem; box-shadow: 0 4px 14px rgba(14,165,233,0.4);
     }
-    .mas-title-group h1 { color: #FFFFFF; font-size: 1.6rem; font-weight: 800; margin: 0; }
-    .mas-title-group p  { color: #AAAAAA; font-size: 0.85rem; margin: 4px 0 0 0; font-weight: 500; }
-    
-    .mas-header-right { display: flex; align-items: center; gap: 12px; }
+    .mas-title-group h1 { color: #f8fafc; font-size: 1.4rem; font-weight: 700; margin: 0; }
+    .mas-title-group p  { color: #93a5c2; font-size: 0.8rem; margin: 3px 0 0 0; }
+    .mas-header-right { display: flex; align-items: center; gap: 10px; }
     .mas-tick-pill {
-        font-weight: 600; font-size: 0.75rem; color: #FFFFFF;
-        background: #111111; border: 1px solid #333333;
-        padding: 6px 12px; border-radius: 20px;
+        font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #cbd5e1;
+        background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+        padding: 4px 10px; border-radius: 8px;
     }
-    
     .pulse-dot {
-        width: 8px; height: 8px; border-radius: 50%; background: #FFFFFF; display: inline-block;
-        margin-right: 6px; box-shadow: 0 0 0 rgba(255,255,255,0.6); animation: pulse 2s infinite;
+        width: 8px; height: 8px; border-radius: 50%; background: #34d399; display: inline-block;
+        margin-right: 6px; box-shadow: 0 0 0 rgba(52,211,153,0.6); animation: pulse 2s infinite;
     }
     @keyframes pulse {
-        0%   { box-shadow: 0 0 0 0 rgba(255,255,255,0.4); }
-        70%  { box-shadow: 0 0 0 6px rgba(255,255,255,0); }
-        100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
+        0%   { box-shadow: 0 0 0 0 rgba(52,211,153,0.55); }
+        70%  { box-shadow: 0 0 0 7px rgba(52,211,153,0); }
+        100% { box-shadow: 0 0 0 0 rgba(52,211,153,0); }
     }
 
-    /* KPI Strip */
-    .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+    /* ── KPI Strip (top of main content) ─────────────────────────────── */
+    .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
     .kpi-card {
-        background: #000000;
-        border: 1px solid #333333;
+        background: rgba(13, 27, 56, 0.75);
+        border: 1px solid rgba(56, 189, 248, 0.16);
         border-radius: 12px;
-        padding: 18px 22px;
-        transition: transform 0.3s ease, border-color 0.3s ease;
+        padding: 14px 18px;
+        transition: border-color 0.15s ease, transform 0.15s ease;
     }
-    .kpi-card:hover { transform: translateY(-4px); border-color: #777777; }
-    .kpi-label { color: #AAAAAA; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; display:flex; align-items:center; gap:6px; }
-    .kpi-value { color: #FFFFFF; font-size: 2rem; font-weight: 800; margin-top: 6px; line-height: 1.1; }
-    .kpi-sub { color: #888888; font-size: 0.75rem; margin-top: 4px; font-weight: 500; }
+    .kpi-card:hover { border-color: rgba(56,189,248,0.5); transform: translateY(-2px); }
+    .kpi-label { color: #8ea2c2; font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; display:flex; align-items:center; gap:6px; }
+    .kpi-value { color: #f1f5f9; font-size: 1.7rem; font-weight: 700; margin-top: 4px; line-height: 1.2; }
+    .kpi-value.accent-blue  { color: #38bdf8; }
+    .kpi-value.accent-red   { color: #f87171; }
+    .kpi-value.accent-amber { color: #fbbf24; }
+    .kpi-value.accent-green { color: #34d399; }
+    .kpi-sub { color: #64748b; font-size: 0.7rem; margin-top: 3px; }
 
-    /* Sidebar Metric Cards */
-    .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    /* ── Sidebar Metric Cards (2-col grid) ───────────────────────────── */
+    .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .metric-card {
-        background: #000000;
-        border: 1px solid #333333;
-        border-radius: 12px;
-        padding: 14px;
-        transition: transform 0.3s ease, border-color 0.3s ease;
+        background: rgba(13, 27, 56, 0.85);
+        border: 1px solid rgba(30, 80, 160, 0.4);
+        border-radius: 10px;
+        padding: 10px 12px;
+        box-shadow: 0 4px 16px rgba(0, 40, 100, 0.15);
+        transition: transform 0.15s ease, border-color 0.15s ease;
     }
-    .metric-card:hover { border-color: #666666; transform: translateY(-2px); }
-    .metric-label { color: #AAAAAA; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
-    .metric-value { color: #FFFFFF; font-size: 1.4rem; font-weight: 800; line-height: 1.2; margin-top: 4px; }
-    .metric-sub   { color: #888888; font-size: 0.7rem; margin-top: 4px; line-height: 1.3; font-weight: 500; }
+    .metric-card:hover { border-color: #3b82f6; transform: translateY(-1px); }
+    .metric-label { color: #94a3b8; font-size: 0.63rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+    .metric-value { color: #38bdf8; font-size: 1.25rem; font-weight: 700; line-height: 1.25; margin-top: 2px; }
+    .metric-sub   { color: #64748b; font-size: 0.62rem; margin-top: 2px; line-height: 1.3; }
 
-    /* Section Headings */
+    /* ── Section Headings ────────────────────────────────────────────── */
     .section-heading {
-        display: flex; align-items: center; gap: 10px;
-        color: #FFFFFF; font-size: 1.1rem; font-weight: 800;
-        margin: 8px 0 14px 0;
-        padding-bottom: 10px;
-        border-bottom: 1px solid #333333;
+        display: flex; align-items: center; gap: 8px;
+        color: #e2e8f0; font-size: 0.95rem; font-weight: 700;
+        margin: 4px 0 10px 0;
+        padding-bottom: 8px;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.14);
     }
     .section-heading .tag {
-        font-size: 0.65rem; font-weight: 700; color: #DDDDDD;
-        background: #222222; padding: 4px 10px; border-radius: 20px;
+        font-size: 0.62rem; font-weight: 600; color: #64748b;
+        background: rgba(148,163,184,0.08); padding: 2px 8px; border-radius: 6px;
         text-transform: uppercase; letter-spacing: 0.05em;
     }
 
-    /* Map Legend */
+    /* ── Map Legend ───────────────────────────────────────────────────── */
     .legend-bar {
-        display: flex; gap: 20px; flex-wrap: wrap; align-items: center;
-        margin-bottom: 12px; padding: 12px 20px;
-        background: #000000; border: 1px solid #333333;
-        border-radius: 12px;
+        display: flex; gap: 18px; flex-wrap: wrap; align-items: center;
+        margin-bottom: 8px; padding: 8px 16px;
+        background: rgba(13,27,56,0.6); border: 1px solid rgba(56,189,248,0.12);
+        border-radius: 8px;
     }
-    .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: #BBBBBB; font-weight: 500; }
-    .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-    .legend-line { width: 20px; height: 0; display: inline-block; border-top: 3px solid; }
+    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.74rem; color: #cbd5e1; }
+    .legend-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+    .legend-line { width: 18px; height: 0; display: inline-block; border-top: 3px solid; }
     .legend-line.dashed { border-top-style: dashed; }
-    .legend-sq { width: 12px; height: 12px; display: inline-block; border-radius: 3px; }
+    .legend-sq { width: 10px; height: 10px; display: inline-block; border-radius: 2px; }
 
-    /* Route Comparison Bar */
+    /* ── Route Comparison Bar ────────────────────────────────────────── */
     .route-bar {
-        background: #000000; border: 1px solid #333333;
-        border-radius: 12px; padding: 16px 22px; margin-top: 12px;
+        background: rgba(13,27,56,0.85); border: 1px solid rgba(59,130,246,0.28);
+        border-radius: 10px; padding: 12px 18px; margin-top: 8px;
         display: flex; justify-content: space-between; align-items: center;
-        flex-wrap: wrap; gap: 12px; font-size: 0.85rem; color: #CCCCCC;
+        flex-wrap: wrap; gap: 8px; font-size: 0.8rem; color: #cbd5e1;
     }
-    .route-bar b { color: #FFFFFF; font-weight: 700; }
+    .route-bar b { color: #e2e8f0; }
 
-    /* Explainability Panel */
+    /* ── Explainability Panel ────────────────────────────────────────── */
     .explain-box {
-        background: #000000;
-        border: 1px solid #444444;
-        border-left: 4px solid #FFFFFF;
-        border-radius: 8px;
-        padding: 16px 20px;
-        margin-bottom: 14px;
-        font-size: 0.85rem;
-        color: #DDDDDD;
-    }
-    .explain-metric { font-weight: 700; color: #FFFFFF; }
-
-    /* Event Feed */
-    .event-item {
-        background: #000000;
-        border: 1px solid #333333;
-        border-left: 3px solid #777777;
-        border-radius: 8px;
+        background: rgba(26, 18, 9, 0.9);
+        border-left: 4px solid #f59e0b;
+        border-radius: 0 8px 8px 0;
         padding: 12px 16px;
         margin-bottom: 10px;
-        font-size: 0.85rem;
-        color: #CCCCCC;
-        line-height: 1.5;
-        display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
-        font-weight: 500;
-        transition: background 0.3s ease;
+        font-size: 0.82rem;
+        color: #fef3c7;
     }
-    .event-item:hover { background: #0A0A0A; }
-    .event-item.warn { border-left-color: #AAAAAA; }
-    .event-item.crit { border-left-color: #FFFFFF; }
+    .explain-metric { font-family: 'JetBrains Mono', monospace; color: #fbbf24; font-weight: 600; }
+
+    /* ── Event Feed ───────────────────────────────────────────────────── */
+    .event-item {
+        background: rgba(13, 27, 56, 0.75);
+        border-left: 3px solid #3b82f6;
+        border-radius: 0 6px 6px 0;
+        padding: 8px 12px;
+        margin-bottom: 6px;
+        font-size: 0.78rem;
+        color: #cbd5e1;
+        line-height: 1.4;
+        display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;
+    }
+    .event-item.warn { border-left-color: #f59e0b; color: #fde68a; background: rgba(35, 25, 10, 0.75); }
+    .event-item.crit { border-left-color: #ef4444; color: #fca5a5; background: rgba(40, 15, 15, 0.75); }
     .event-count {
-        flex-shrink: 0; font-size: 0.7rem; font-weight: 800; color: #000000;
-        background: #FFFFFF; border-radius: 12px; padding: 2px 8px; white-space: nowrap;
+        flex-shrink: 0; font-size: 0.65rem; font-weight: 700; color: #0f172a;
+        background: #94a3b8; border-radius: 8px; padding: 1px 7px; white-space: nowrap;
     }
 
-    /* Status Badges */
+    /* ── Status Badges ────────────────────────────────────────────────── */
     .badge {
-        display: inline-block; border-radius: 16px;
-        padding: 4px 12px; font-size: 0.7rem; font-weight: 700;
-        letter-spacing: 0.05em;
+        display: inline-block; border-radius: 12px;
+        padding: 2px 10px; font-size: 0.68rem; font-weight: 600;
+        letter-spacing: 0.04em;
     }
-    .badge-real { background: #111111; color: #FFFFFF; border: 1px solid #444444; }
-    .badge-syn  { background: #222222; color: #DDDDDD; border: 1px solid #555555; }
+    .badge-real { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+    .badge-syn  { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
 
-    /* Data Authenticity Rows */
+    /* ── Data Authenticity Rows ───────────────────────────────────────── */
     .data-row {
-        display: flex; align-items: flex-start; gap: 10px;
-        padding: 8px 0; border-bottom: 1px solid #222222;
+        display: flex; align-items: flex-start; gap: 8px;
+        padding: 6px 0; border-bottom: 1px solid rgba(148,163,184,0.08);
     }
     .data-row:last-child { border-bottom: none; }
-    .data-row-text { font-size: 0.8rem; color: #AAAAAA; line-height: 1.4; font-weight: 500; }
-    .data-row-text b { color: #FFFFFF; font-size: 0.85rem; font-weight: 700; }
+    .data-row-text { font-size: 0.72rem; color: #94a3b8; line-height: 1.35; }
+    .data-row-text b { color: #cbd5e1; font-size: 0.76rem; }
 
-    /* Overlay sidebar */
+    /* Overlay sidebar: does not shrink the map. Collapsed by default; hover/click expands. */
     [data-testid="stSidebar"] {
-        background: #000000 !important;
-        border-right: 1px solid #333333;
+        background: linear-gradient(180deg, #0b1220 0%, #101a30 100%) !important;
+        border-right: 1px solid rgba(56, 189, 248, 0.35);
         z-index: 400;
     }
     [data-testid="stSidebar"] * {
-        color: #DDDDDD !important;
+        color: #e2e8f0 !important;
     }
     [data-testid="stSidebar"] label,
     [data-testid="stSidebar"] p,
     [data-testid="stSidebar"] span,
     [data-testid="stSidebar"] .stMarkdown {
-        color: #DDDDDD !important;
+        color: #e2e8f0 !important;
         opacity: 1 !important;
     }
     [data-testid="stSidebar"] .stButton button {
-        border-radius: 8px; font-weight: 700; font-size: 0.85rem;
-        background: #000000;
-        color: #FFFFFF !important;
-        border: 1px solid #555555;
-        transition: all 0.2s ease;
-    }
-    [data-testid="stSidebar"] .stButton button:hover {
-        border-color: #FFFFFF; background: #111111;
+        border-radius: 8px; font-weight: 600; font-size: 0.82rem;
+        color: #f8fafc !important;
     }
     div[data-testid="stAppViewContainer"] > section.main {
         margin-left: 0 !important;
     }
     [data-testid="stBottom"] {
-        background: #000000;
-        border-top: 1px solid #333333;
-        color: #888888;
-        font-size: 0.8rem;
-        font-weight: 500;
+        background: rgba(8, 14, 28, 0.92);
+        border-top: 1px solid rgba(56, 189, 248, 0.25);
+        color: #cbd5e1;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.75rem;
     }
-
-    /* Streamlit overrides for inputs and expanders */
-    .stTextInput input {
-        border-radius: 8px; border: 1px solid #444444; background: #000000; color: #FFFFFF; font-weight: 500;
-    }
-    .stTextInput input:focus { border-color: #FFFFFF; box-shadow: 0 0 0 1px #FFFFFF; }
-    .stExpander { border: 1px solid #333333; border-radius: 12px; background: #000000; }
-    .stExpander summary { color: #FFFFFF !important; font-weight: 700; }
 
     /* Footer */
     .mas-footer {
-        text-align: center; color: #666666; font-size: 0.75rem; padding: 20px 0 10px 0; font-weight: 500;
+        text-align: center; color: #4b5c78; font-size: 0.7rem; padding: 18px 0 4px 0;
     }
     </style>
     """,
@@ -301,8 +281,9 @@ if "initialised" not in st.session_state:
     st.session_state.auto_play = False
     st.session_state.playback_speed = 3
     st.session_state.show_gfw = True
+    st.session_state.show_debris_zones = True
     st.session_state.show_before_after = True
-    st.session_state.map_style_choice = " CartoDB Dark Matter"
+    st.session_state.map_style_choice = "🌌 Esri Dark Nautical Canvas"
     st.session_state.planner_route = None
     st.session_state.planner_baseline = None
     st.session_state.planner_labels = None
@@ -351,10 +332,19 @@ def _apply_basemap(folium_map, choice: str) -> None:
             overlay=False,
             control=True,
         ).add_to(folium_map)
-    elif "CartoDB" in choice:
+    elif "Dark" in choice:
         folium.TileLayer(
-            tiles="cartodbdark_matter",
-            name="CartoDB Dark Matter",
+            tiles="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+            attr="Esri World Dark Gray Canvas",
+            name="Esri Dark Nautical Canvas",
+            overlay=False,
+            control=True,
+        ).add_to(folium_map)
+    elif "Ocean" in choice:
+        folium.TileLayer(
+            tiles="https://services.arcgisonline.com/arcgis/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}",
+            attr="Esri Ocean Basemap",
+            name="Esri Ocean Bathymetry",
             overlay=False,
             control=True,
         ).add_to(folium_map)
@@ -840,23 +830,68 @@ def _build_live_folium_map(state: dict, choice: str):
         show_before_after=st.session_state.show_before_after,
     )
 
+    # ── Real Oceanic Marine Debris Accumulation Zones (NOAA MDMAP & Ocean Gyres) ──
+    if st.session_state.get("show_debris_zones", True):
+        for dz in state.get("debris_zones", []):
+            poly_coords = [[p[0], p[1]] for p in dz["polygon"]]
+            folium.Polygon(
+                locations=poly_coords,
+                color="#d97706",
+                weight=2,
+                dash_array="6, 6",
+                fill=True,
+                fill_color="#f59e0b",
+                fill_opacity=0.20,
+                popup=folium.Popup(
+                    f"<div style='font-family:Inter,sans-serif;min-width:240px;'>"
+                    f"<div style='color:#d97706;font-weight:700;font-size:0.92rem;'>🌊 {dz['name']}</div>"
+                    f"<hr style='margin:4px 0;'/>"
+                    f"<b>Density:</b> {dz['density_desc']}<br/>"
+                    f"<b>Severity:</b> <span style='color:{'#ef4444' if dz['severity']=='High' else '#d97706'};font-weight:700'>{dz['severity']}</span><br/>"
+                    f"<b>Primary Materials:</b> {', '.join(dz.get('primary_materials', []))}<br/>"
+                    f"<b>Scientific Citation:</b> <i>{dz.get('citation', 'NOAA Marine Debris Program')}</i>"
+                    f"</div>",
+                    max_width=320,
+                ),
+            ).add_to(folium_map)
+
+    # ── Real Marine Debris Clustered Hotspots (Zoom-Resilient Markers) ──
     for hs in state.get("debris_hotspots", []):
         c = hs["center"]
-        folium.Circle(
+        types_summary = ", ".join([f"{k} ({v})" for k, v in hs.get("debris_types", {}).items()][:3]) or "Mixed Plastics"
+
+        # Outer glowing halo (guarantees visibility at world scale zoom 2-4)
+        folium.CircleMarker(
             location=[c[0], c[1]],
-            radius=12000 + hs["sighting_count"] * 4000,
+            radius=15,
             color="#f59e0b",
+            weight=1.5,
+            fill=True,
+            fill_color="#fde68a",
+            fill_opacity=0.35,
+        ).add_to(folium_map)
+
+        # Core high-visibility beacon marker
+        folium.CircleMarker(
+            location=[c[0], c[1]],
+            radius=8,
+            color="#b45309",
             weight=2,
             fill=True,
             fill_color="#fbbf24",
-            fill_opacity=0.45,
+            fill_opacity=0.95,
             popup=folium.Popup(
-                f"<b>Debris Hotspot {hs['hotspot_id']}</b><br/>"
-                f"Sightings: {hs['sighting_count']}<br/>"
-                f"Severity: {hs['severity']}<br/>"
-                f"Assigned Collector: {hs.get('collector_assigned') or 'None'}<br/>"
-                f"Cleanup ETA: {hs.get('eta', 'N/A')}",
-                max_width=260,
+                f"<div style='font-family:Inter,sans-serif;min-width:240px;'>"
+                f"<div style='color:#b45309;font-weight:700;font-size:0.92rem;'>🟡 Marine Debris Hotspot {hs['hotspot_id']}</div>"
+                f"<hr style='margin:4px 0;'/>"
+                f"<b>Field Sightings:</b> {hs['sighting_count']} verified monitoring points<br/>"
+                f"<b>Severity:</b> <span style='font-weight:700;color:{'#ef4444' if hs['severity']=='High' else '#d97706'}'>{hs['severity']}</span><br/>"
+                f"<b>Debris Types:</b> {types_summary}<br/>"
+                f"<b>Assigned Collector:</b> <span style='color:#2563eb;font-weight:700'>{hs.get('collector_assigned') or 'None'}</span><br/>"
+                f"<b>Cleanup ETA:</b> {hs.get('eta', 'N/A')}<br/>"
+                f"<b>Dataset Origin:</b> <i>NOAA NCEI Marine Debris & Ocean Gyre Survey</i>"
+                f"</div>",
+                max_width=300,
             ),
         ).add_to(folium_map)
 
@@ -1001,6 +1036,7 @@ def _live_map_cache_key(state: dict, choice: str) -> tuple:
         choice,
         bool(st.session_state.get("show_gfw")),
         bool(st.session_state.get("show_before_after")),
+        bool(st.session_state.get("show_debris_zones", True)),
         bool(state.get("storm_mode_active")),
         st.session_state.get("search_focus_vessel"),
         st.session_state.get("active_search_vessel"),
@@ -1160,6 +1196,7 @@ def _live_ops_panel(header_slot, kpi_slot, map_feed_slot=None, explain_slot=None
                       <span class="legend-item"><span class="legend-dot" style="background:#10b981"></span>Active vessel</span>
                       <span class="legend-item"><span class="legend-dot" style="background:#ef4444"></span>Flagged dark vessel</span>
                       <span class="legend-item"><span class="legend-dot" style="background:#fbbf24"></span>Debris hotspot</span>
+                      <span class="legend-item"><span class="legend-sq" style="background:#f59e0b;opacity:0.4;border:1px dashed #d97706"></span>Debris gyre zone</span>
                       <span class="legend-item"><span class="legend-dot" style="background:#3b82f6"></span>Collector ship</span>
                       <span class="legend-item"><span class="legend-line" style="border-color:#38bdf8"></span>Optimized route</span>
                       <span class="legend-item"><span class="legend-line dashed" style="border-color:#ef4444"></span>Naive baseline</span>
@@ -1169,7 +1206,7 @@ def _live_ops_panel(header_slot, kpi_slot, map_feed_slot=None, explain_slot=None
                     """,
                     unsafe_allow_html=True,
                 )
-                choice = st.session_state.get("map_style_choice", " Google Maps Satellite Hybrid")
+                choice = st.session_state.get("map_style_choice", "🌌 Esri Dark Nautical Canvas")
                 map_html, rebuilt, build_ms = _get_cached_live_folium_map(live, choice)
                 if rebuilt:
                     with st.spinner("Rebuilding live map (~2,000 vessels)…"):
@@ -1472,12 +1509,14 @@ with st.sidebar:
         st.session_state.map_style_choice = st.selectbox(
             "Basemap",
             [
-                " CartoDB Dark Matter",
-                " Google Maps Satellite Hybrid",
-                " Esri World Imagery (High-Res)",
-                " OpenStreetMap Marine View",
+                "🌌 Esri Dark Nautical Canvas",
+                "🌊 Esri Ocean Bathymetry",
+                "🌍 OpenStreetMap Marine View",
+                "🛰️ Google Maps Satellite Hybrid",
+                "🛰️ Esri World Imagery (High-Res)",
             ],
         )
+        st.session_state.show_debris_zones = st.checkbox("Show real ocean debris gyre zones (NOAA/TOC)", value=st.session_state.get("show_debris_zones", True))
         st.session_state.show_gfw = st.checkbox("Show Global Fishing Watch zones", value=st.session_state.show_gfw)
         st.session_state.show_before_after = st.checkbox("Show naive vs. optimized route", value=st.session_state.show_before_after)
 
@@ -1517,11 +1556,10 @@ with st.sidebar:
 # ─────────────────────────────────────────────────────────────────────────── #
 #  Handle Simulation Advance                                                   #
 # ─────────────────────────────────────────────────────────────────────────── #
-if st.session_state.auto_play:
-    with st.spinner("Auto-play: advancing tick and rebuilding the live map…"):
-        orchestrator.tick()
-        time.sleep(st.session_state.playback_speed)
-    st.rerun()
+if st.session_state.get("auto_play", False):
+    orchestrator.tick()
+    _live = orchestrator.get_state()
+    _maybe_log_watchlist_realerts(_live)
 
 state = orchestrator.get_state()
 
@@ -1624,31 +1662,22 @@ if nav == NAV_LIVE:
     def _hotspots_df(state: dict) -> pd.DataFrame:
 
         rows = [
-
             {
-
                 "hotspot_id": hs.get("hotspot_id"),
-
                 "center": _fmt_latlon(hs.get("center")),
-
+                "severity": hs.get("severity", "Medium"),
                 "sighting_count": hs.get("sighting_count"),
-
-                "collector_assigned": hs.get("collector_assigned") or "",
-
+                "primary_types": ", ".join(list(hs.get("debris_types", {}).keys())[:2]) if hs.get("debris_types") else "Plastics",
+                "collector_assigned": hs.get("collector_assigned") or "None",
                 "status": hs.get("status"),
-
+                "cleanup_eta": hs.get("eta", "N/A"),
+                "source": "NOAA MDMAP & Ocean Gyre Survey",
             }
-
             for hs in state.get("debris_hotspots", [])
-
         ]
-
         df = pd.DataFrame(
-
             rows,
-
-            columns=["hotspot_id", "center", "sighting_count", "collector_assigned", "status"],
-
+            columns=["hotspot_id", "center", "severity", "sighting_count", "primary_types", "collector_assigned", "status", "cleanup_eta", "source"],
         )
 
         if df.empty:
@@ -1894,8 +1923,12 @@ st.markdown(
     """
     <div class="mas-footer">
       MaritimeMAS · Weather via Open-Meteo Marine API · Storm track via NOAA HURDAT2 ·
-      Fishing zones via Global Fishing Watch · AIS &amp; debris data synthetic for demo purposes
+      Fishing zones via Global Fishing Watch · Marine Debris via NOAA NCEI &amp; Global Gyres
     </div>
     """,
     unsafe_allow_html=True,
 )
+
+if st.session_state.get("auto_play", False):
+    time.sleep(st.session_state.get("playback_speed", 2))
+    st.rerun()

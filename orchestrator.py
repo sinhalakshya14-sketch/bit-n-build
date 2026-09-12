@@ -32,7 +32,7 @@ import time
 import logging
 from typing import Any
 
-from data.loader import load_all, DATA_STATUS
+from data.loader import load_all, DATA_STATUS, load_debris_zones
 from agents.route import get_route, _snap_to_grid
 from agents.dark_vessel import detect_dark_vessels
 from agents import debris as debris_agent
@@ -484,6 +484,7 @@ def initialise() -> None:
         weather_df=weather_df,
         storm_df=storm_df,
         fishing_zones=fishing_zones,
+        debris_zones=load_debris_zones(),
         data_status=dict(DATA_STATUS),
         vessel_memory={},
         detection_thresholds={

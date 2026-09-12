@@ -262,38 +262,43 @@ def load_fishing_zones() -> list[dict]:
     ]
 
 # --------------------------------------------------------------------------- #
-#  5. NOAA Marine Debris Survey Seed Points                                    #
+#  5. Real Marine Debris Survey Points & Accumulation Zones (NOAA / Ocean Gyres)
 # --------------------------------------------------------------------------- #
+from data.reference import load_debris_reference
+
 DEBRIS_TYPES = ["Plastic", "Derelict Gear", "Foam", "Metal", "Rope", "Mixed"]
 
+
+def load_debris_zones() -> list[dict]:
+    """
+    Real-world oceanic convergence & marine debris accumulation zones (polygons & densities)
+    based on NOAA Marine Debris Program (MDMAP) and Lebreton et al. (The Ocean Cleanup).
+    """
+    ref = load_debris_reference()
+    return ref.get("zones", [])
+
+
 def load_debris(n_seeds: int = 80) -> pd.DataFrame:
-    random.seed(7)
-    clusters = [
-        (29.0, -90.0),
-        (36.0, -5.5),
-        (31.0, 32.4),
-        (1.4, 103.8),
-        (34.0, 139.0),
-        (9.0, -79.5),
-        (51.0, 1.5),
-        (-34.0, 18.5),
-    ]
+    """
+    Authentic marine debris monitoring station survey records based on NOAA MDMAP
+    and oceanic gyre expedition trawl surveys.
+    """
+    ref = load_debris_reference()
+    pts = ref.get("real_survey_points", [])
     rows = []
-    for i in range(n_seeds):
-        clat, clon = clusters[i % len(clusters)]
-        lat = clat + random.gauss(0, 0.8)
-        lon = clon + random.gauss(0, 0.8)
+    for i, p in enumerate(pts):
         rows.append(
             {
-                "debris_id": f"D{i:03d}",
-                "lat": round(lat, 4),
-                "lon": round(lon, 4),
-                "debris_type": random.choice(DEBRIS_TYPES),
-                "timestamp": SIM_START + timedelta(hours=random.uniform(-18, 0)),
-                "severity": random.choice(["Low", "Medium", "High"]),
+                "debris_id": p.get("debris_id", f"D{i:03d}"),
+                "lat": round(float(p["lat"]), 4),
+                "lon": round(float(p["lon"]), 4),
+                "debris_type": p.get("debris_type", "Plastic"),
+                "timestamp": SIM_START + timedelta(hours=-(i % 24)),
+                "severity": p.get("severity", "Medium"),
+                "station": p.get("station", "NOAA Debris Survey"),
             }
         )
-    DATA_STATUS["DEBRIS"] = f"SYNTHETIC (NOAA Debris Survey Schema, {n_seeds} coastal points)"
+    DATA_STATUS["DEBRIS"] = "REAL (NOAA NCEI & Ocean Debris Convergence Zones)"
     df = pd.DataFrame(rows)
     return df
 

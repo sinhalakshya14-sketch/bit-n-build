@@ -33,8 +33,8 @@ BBOX = {"lat_min": -40.0, "lat_max": 60.0, "lon_min": -180.0, "lon_max": 180.0}
 DEBRIS_TYPES = ["Plastic", "Derelict Gear", "Foam", "Metal", "Rope", "Mixed"]
 
 # DBSCAN parameters (degrees ≈ km at these latitudes)
-# eps=0.5° ≈ 55 km — reasonable "hotspot" radius for open-ocean debris
-DBSCAN_EPS = 0.5
+# eps=1.2° ≈ 130 km — clusters real regional monitoring stations into oceanic hotspots
+DBSCAN_EPS = 1.2
 DBSCAN_MIN_SAMPLES = 2
 
 

@@ -20,3 +20,9 @@ def load_lighthouses() -> pd.DataFrame:
 
 def load_companies() -> pd.DataFrame:
     return pd.read_csv(_REF_DIR / "companies.csv")
+
+
+def load_debris_reference() -> dict:
+    import json
+    with open(_REF_DIR / "real_marine_debris.json", encoding="utf-8") as f:
+        return json.load(f)

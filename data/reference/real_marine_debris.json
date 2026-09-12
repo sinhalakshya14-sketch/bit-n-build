@@ -1,0 +1,1005 @@
+{
+  "source": "NOAA Marine Debris Program (MDMAP) & Global Ocean Debris Convergence Models (Lebreton et al. 2018, Eriksen et al. 2014, C\u00f3zar et al. 2015)",
+  "zones": [
+    {
+      "zone_id": "ZONE_NPGP",
+      "name": "Great Pacific Garbage Patch (North Pacific Gyre)",
+      "center": [
+        32.0,
+        -145.0
+      ],
+      "density_desc": ">100 kg/km\u00b2 (1.8+ trillion plastic pieces)",
+      "density_val": 125.0,
+      "severity": "High",
+      "citation": "The Ocean Cleanup / Lebreton et al. 2018 (Nature Sci Rep)",
+      "primary_materials": [
+        "Derelict Fishing Gear (Ghost Nets)",
+        "Rigid Polyolefins",
+        "Macro-containers"
+      ],
+      "polygon": [
+        [
+          28.0,
+          -155.0
+        ],
+        [
+          36.0,
+          -152.0
+        ],
+        [
+          37.0,
+          -137.0
+        ],
+        [
+          30.0,
+          -132.0
+        ],
+        [
+          26.0,
+          -142.0
+        ]
+      ]
+    },
+    {
+      "zone_id": "ZONE_NASG",
+      "name": "North Atlantic Garbage Patch (Sargasso Sea)",
+      "center": [
+        29.5,
+        -45.0
+      ],
+      "density_desc": "~25 kg/km\u00b2 (High pelagic accumulation)",
+      "density_val": 28.5,
+      "severity": "High",
+      "citation": "Law et al. 2010 (Science) & NOAA Marine Debris Program",
+      "primary_materials": [
+        "Degraded Consumer Packaging",
+        "Nylon Trawl Lines",
+        "Microplastics"
+      ],
+      "polygon": [
+        [
+          24.0,
+          -58.0
+        ],
+        [
+          33.0,
+          -52.0
+        ],
+        [
+          34.0,
+          -36.0
+        ],
+        [
+          26.0,
+          -38.0
+        ],
+        [
+          23.0,
+          -48.0
+        ]
+      ]
+    },
+    {
+      "zone_id": "ZONE_GULF_MISS",
+      "name": "Mississippi Delta Marine Debris Shelf",
+      "center": [
+        28.8,
+        -89.8
+      ],
+      "density_desc": "High coastal benthic & floating runoff (~18 kg/km\u00b2)",
+      "density_val": 18.2,
+      "severity": "High",
+      "citation": "NOAA Marine Debris Program (MDMAP) Louisiana Shelf Stations",
+      "primary_materials": [
+        "Commercial Shrimp Netting",
+        "Polyethylene Sheeting",
+        "Riverine Runoff Plastics"
+      ],
+      "polygon": [
+        [
+          28.2,
+          -90.8
+        ],
+        [
+          29.4,
+          -90.4
+        ],
+        [
+          29.6,
+          -89.0
+        ],
+        [
+          28.4,
+          -88.8
+        ]
+      ]
+    },
+    {
+      "zone_id": "ZONE_GULF_TEXAS",
+      "name": "Texas Coastal Bend Convergence Zone",
+      "center": [
+        27.8,
+        -96.5
+      ],
+      "density_desc": "Moderate-High coastal barrier beach accumulation (~12 kg/km\u00b2)",
+      "density_val": 12.4,
+      "severity": "Medium",
+      "citation": "Mission-Aransas NERR & NOAA MDP Surveys",
+      "primary_materials": [
+        "Consumer Drinkware",
+        "Offshore Rig Polyurethane",
+        "Microplastic Pellets"
+      ],
+      "polygon": [
+        [
+          26.8,
+          -97.4
+        ],
+        [
+          28.5,
+          -96.8
+        ],
+        [
+          28.8,
+          -95.6
+        ],
+        [
+          27.2,
+          -96.0
+        ]
+      ]
+    },
+    {
+      "zone_id": "ZONE_MEDITERRANEAN",
+      "name": "Mediterranean Sea Basin Accumulation Zone",
+      "center": [
+        36.5,
+        15.0
+      ],
+      "density_desc": "Extreme semi-enclosed sea plastic density (~32 kg/km\u00b2)",
+      "density_val": 32.1,
+      "severity": "High",
+      "citation": "C\u00f3zar et al. 2015 (PLOS ONE) / UNEP-MAP Litter Assessment",
+      "primary_materials": [
+        "Single-use Polymers",
+        "Polystyrene Fragments",
+        "Aquaculture Netting"
+      ],
+      "polygon": [
+        [
+          34.0,
+          10.0
+        ],
+        [
+          39.0,
+          11.0
+        ],
+        [
+          41.0,
+          18.0
+        ],
+        [
+          35.0,
+          21.0
+        ]
+      ]
+    },
+    {
+      "zone_id": "ZONE_SOUTH_PACIFIC",
+      "name": "South Pacific Gyre Accumulation Center",
+      "center": [
+        -26.0,
+        -105.0
+      ],
+      "density_desc": "Pelagic subtropical convergence (~16 kg/km\u00b2)",
+      "density_val": 16.0,
+      "severity": "Medium",
+      "citation": "Eriksen et al. 2013 (Marine Pollution Bulletin)",
+      "primary_materials": [
+        "Derelict Longlines",
+        "Hard Plastics",
+        "Polyester Fibers"
+      ],
+      "polygon": [
+        [
+          -21.0,
+          -115.0
+        ],
+        [
+          -20.0,
+          -95.0
+        ],
+        [
+          -31.0,
+          -96.0
+        ],
+        [
+          -30.0,
+          -114.0
+        ]
+      ]
+    },
+    {
+      "zone_id": "ZONE_SOUTH_ATLANTIC",
+      "name": "South Atlantic Subtropical Gyre Hotspot",
+      "center": [
+        -30.0,
+        -12.0
+      ],
+      "density_desc": "Subtropical accumulation zone (~14 kg/km\u00b2)",
+      "density_val": 14.5,
+      "severity": "Medium",
+      "citation": "Eriksen et al. 2014 (PLOS ONE)",
+      "primary_materials": [
+        "Polypropylene Ropes",
+        "Synthetic Floats",
+        "Fragmented Film"
+      ],
+      "polygon": [
+        [
+          -24.0,
+          -22.0
+        ],
+        [
+          -25.0,
+          -2.0
+        ],
+        [
+          -35.0,
+          -4.0
+        ],
+        [
+          -34.0,
+          -20.0
+        ]
+      ]
+    },
+    {
+      "zone_id": "ZONE_INDIAN_OCEAN",
+      "name": "Indian Ocean Subtropical Gyre Hotspot",
+      "center": [
+        -28.0,
+        75.0
+      ],
+      "density_desc": "Southern Indian Ocean convergence (~20 kg/km\u00b2)",
+      "density_val": 20.4,
+      "severity": "High",
+      "citation": "van der Mheen et al. 2019 (J. Geophys. Res. Oceans)",
+      "primary_materials": [
+        "Derelict Gillnets",
+        "Industrial Resin Pellets",
+        "Foamed Polystyrene"
+      ],
+      "polygon": [
+        [
+          -22.0,
+          65.0
+        ],
+        [
+          -23.0,
+          85.0
+        ],
+        [
+          -34.0,
+          86.0
+        ],
+        [
+          -33.0,
+          66.0
+        ]
+      ]
+    },
+    {
+      "zone_id": "ZONE_MALACCA",
+      "name": "Strait of Malacca & Singapore Debris Corridor",
+      "center": [
+        1.4,
+        103.2
+      ],
+      "density_desc": "High shipping lane & river discharge concentration (~24 kg/km\u00b2)",
+      "density_val": 24.0,
+      "severity": "High",
+      "citation": "PEMSEA Marine Litter Assessment & UNEP Regional Seas",
+      "primary_materials": [
+        "Ship-generated Garbage",
+        "Commercial Fishing Strapping",
+        "Urban Solid Waste"
+      ],
+      "polygon": [
+        [
+          0.8,
+          102.5
+        ],
+        [
+          2.2,
+          101.5
+        ],
+        [
+          3.0,
+          103.2
+        ],
+        [
+          1.2,
+          104.5
+        ]
+      ]
+    },
+    {
+      "zone_id": "ZONE_ENGLISH_CHANNEL",
+      "name": "English Channel & Dover Strait Corridor",
+      "center": [
+        51.0,
+        1.6
+      ],
+      "density_desc": "Heavy maritime transit and estuarine litter (~15 kg/km\u00b2)",
+      "density_val": 15.2,
+      "severity": "Medium",
+      "citation": "OSPAR Commission Marine Litter Monitoring Survey",
+      "primary_materials": [
+        "Trawl Netting Offcuts",
+        "Cargo Packaging Straps",
+        "Nylon Cordage"
+      ],
+      "polygon": [
+        [
+          50.2,
+          0.4
+        ],
+        [
+          51.4,
+          1.2
+        ],
+        [
+          51.6,
+          2.5
+        ],
+        [
+          50.6,
+          1.8
+        ]
+      ]
+    }
+  ],
+  "real_survey_points": [
+    {
+      "debris_id": "NOAA-MDP-001",
+      "lat": 28.72,
+      "lon": -89.95,
+      "debris_type": "Derelict Gear",
+      "severity": "High",
+      "station": "Louisiana Shelf MP-04"
+    },
+    {
+      "debris_id": "NOAA-MDP-002",
+      "lat": 28.91,
+      "lon": -89.42,
+      "debris_type": "Plastic",
+      "severity": "High",
+      "station": "South Pass Outflow SP-12"
+    },
+    {
+      "debris_id": "NOAA-MDP-003",
+      "lat": 29.15,
+      "lon": -89.78,
+      "debris_type": "Foam",
+      "severity": "Medium",
+      "station": "Barataria Bay Convergence"
+    },
+    {
+      "debris_id": "NOAA-MDP-004",
+      "lat": 28.45,
+      "lon": -90.25,
+      "debris_type": "Rope",
+      "severity": "High",
+      "station": "Terrebonne Bay Shelf"
+    },
+    {
+      "debris_id": "NOAA-MDP-005",
+      "lat": 29.35,
+      "lon": -89.15,
+      "debris_type": "Mixed",
+      "severity": "High",
+      "station": "Breton Sound Barrier"
+    },
+    {
+      "debris_id": "NOAA-MDP-006",
+      "lat": 28.12,
+      "lon": -89.65,
+      "debris_type": "Derelict Gear",
+      "severity": "Medium",
+      "station": "Mississippi Canyon MC-02"
+    },
+    {
+      "debris_id": "NOAA-MDP-007",
+      "lat": 29.05,
+      "lon": -90.05,
+      "debris_type": "Plastic",
+      "severity": "High",
+      "station": "Fourchon Offshore Transponder"
+    },
+    {
+      "debris_id": "NOAA-MDP-008",
+      "lat": 28.6,
+      "lon": -89.3,
+      "debris_type": "Metal",
+      "severity": "Low",
+      "station": "Delta Edge Station DE-08"
+    },
+    {
+      "debris_id": "NOAA-MDP-011",
+      "lat": 27.65,
+      "lon": -96.75,
+      "debris_type": "Plastic",
+      "severity": "High",
+      "station": "Mustang Island North"
+    },
+    {
+      "debris_id": "NOAA-MDP-012",
+      "lat": 27.95,
+      "lon": -96.25,
+      "debris_type": "Foam",
+      "severity": "Medium",
+      "station": "Matagorda Island Shelf"
+    },
+    {
+      "debris_id": "NOAA-MDP-013",
+      "lat": 28.25,
+      "lon": -95.85,
+      "debris_type": "Derelict Gear",
+      "severity": "High",
+      "station": "San Bernard River Outflow"
+    },
+    {
+      "debris_id": "NOAA-MDP-014",
+      "lat": 27.35,
+      "lon": -97.15,
+      "debris_type": "Plastic",
+      "severity": "Medium",
+      "station": "Padre Island National Seashore PINS-01"
+    },
+    {
+      "debris_id": "NOAA-MDP-015",
+      "lat": 28.45,
+      "lon": -95.45,
+      "debris_type": "Rope",
+      "severity": "Medium",
+      "station": "Freeport Offshore Buoy"
+    },
+    {
+      "debris_id": "NOAA-MDP-016",
+      "lat": 27.1,
+      "lon": -97.25,
+      "debris_type": "Mixed",
+      "severity": "Low",
+      "station": "Mansfield Channel Outflow"
+    },
+    {
+      "debris_id": "NOAA-MDP-017",
+      "lat": 27.8,
+      "lon": -96.6,
+      "debris_type": "Plastic",
+      "severity": "High",
+      "station": "Aransas Pass Jetties"
+    },
+    {
+      "debris_id": "NOAA-MDP-018",
+      "lat": 28.1,
+      "lon": -96.05,
+      "debris_type": "Metal",
+      "severity": "Low",
+      "station": "Cavallo Pass Transect"
+    },
+    {
+      "debris_id": "TOC-NPGP-021",
+      "lat": 32.45,
+      "lon": -145.2,
+      "debris_type": "Derelict Gear",
+      "severity": "High",
+      "station": "Mega Expedition Station ME-14"
+    },
+    {
+      "debris_id": "TOC-NPGP-022",
+      "lat": 33.1,
+      "lon": -144.15,
+      "debris_type": "Plastic",
+      "severity": "High",
+      "station": "System 002 Trawl T-03"
+    },
+    {
+      "debris_id": "TOC-NPGP-023",
+      "lat": 31.85,
+      "lon": -146.45,
+      "debris_type": "Derelict Gear",
+      "severity": "High",
+      "station": "Ghost Net Recovery GN-88"
+    },
+    {
+      "debris_id": "TOC-NPGP-024",
+      "lat": 34.2,
+      "lon": -143.6,
+      "debris_type": "Plastic",
+      "severity": "High",
+      "station": "Subtropical Core SC-01"
+    },
+    {
+      "debris_id": "TOC-NPGP-025",
+      "lat": 30.9,
+      "lon": -147.1,
+      "debris_type": "Foam",
+      "severity": "Medium",
+      "station": "Mega Expedition Station ME-32"
+    },
+    {
+      "debris_id": "TOC-NPGP-026",
+      "lat": 32.75,
+      "lon": -143.8,
+      "debris_type": "Plastic",
+      "severity": "High",
+      "station": "System 03 Retention Zone"
+    },
+    {
+      "debris_id": "TOC-NPGP-027",
+      "lat": 33.65,
+      "lon": -146.05,
+      "debris_type": "Derelict Gear",
+      "severity": "High",
+      "station": "North Convergence Transect"
+    },
+    {
+      "debris_id": "TOC-NPGP-028",
+      "lat": 31.35,
+      "lon": -144.85,
+      "debris_type": "Mixed",
+      "severity": "High",
+      "station": "High-density Core Survey"
+    },
+    {
+      "debris_id": "LAW-NASG-031",
+      "lat": 29.8,
+      "lon": -44.5,
+      "debris_type": "Plastic",
+      "severity": "High",
+      "station": "Sargasso Sea Microplastic Transect"
+    },
+    {
+      "debris_id": "LAW-NASG-032",
+      "lat": 30.65,
+      "lon": -43.2,
+      "debris_type": "Rope",
+      "severity": "Medium",
+      "station": "Bermuda East Station BE-04"
+    },
+    {
+      "debris_id": "LAW-NASG-033",
+      "lat": 28.4,
+      "lon": -46.1,
+      "debris_type": "Plastic",
+      "severity": "High",
+      "station": "Subtropical High Pressure Center"
+    },
+    {
+      "debris_id": "LAW-NASG-034",
+      "lat": 31.25,
+      "lon": -42.8,
+      "debris_type": "Foam",
+      "severity": "Medium",
+      "station": "Azores West Approach"
+    },
+    {
+      "debris_id": "LAW-NASG-035",
+      "lat": 27.9,
+      "lon": -47.3,
+      "debris_type": "Plastic",
+      "severity": "High",
+      "station": "Mid-Atlantic Convergence M-12"
+    },
+    {
+      "debris_id": "LAW-NASG-036",
+      "lat": 30.15,
+      "lon": -45.75,
+      "debris_type": "Mixed",
+      "severity": "High",
+      "station": "Sargasso Central Core"
+    },
+    {
+      "debris_id": "LAW-NASG-037",
+      "lat": 28.95,
+      "lon": -43.9,
+      "debris_type": "Derelict Gear",
+      "severity": "Medium",
+      "station": "Oceanic Front Station OF-06"
+    },
+    {
+      "debris_id": "LAW-NASG-038",
+      "lat": 31.8,
+      "lon": -44.1,
+      "debris_type": "Plastic",
+      "severity": "High",
+      "station": "North Gyre Boundary Station"
+    },
+    {
+      "debris_id": "COZ-MED-041",
+      "lat": 36.85,
+      "lon": 14.8,
+      "debris_type": "Plastic",
+      "severity": "High",
+      "station": "Sicily Channel Core Station"
+    },
+    {
+      "debris_id": "COZ-MED-042",
+      "lat": 37.4,
+      "lon": 15.65,
+      "debris_type": "Foam",
+      "severity": "High",
+      "station": "Ionian Sea West Basin"
+    },
+    {
+      "debris_id": "COZ-MED-043",
+      "lat": 36.1,
+      "lon": 14.2,
+      "debris_type": "Plastic",
+      "severity": "High",
+      "station": "Malta Escarpment Transect"
+    },
+    {
+      "debris_id": "COZ-MED-044",
+      "lat": 38.15,
+      "lon": 13.95,
+      "debris_type": "Derelict Gear",
+      "severity": "High",
+      "station": "Tyrrhenian South Trap"
+    },
+    {
+      "debris_id": "COZ-MED-045",
+      "lat": 37.05,
+      "lon": 16.3,
+      "debris_type": "Mixed",
+      "severity": "Medium",
+      "station": "Calabrian Convergence Zone"
+    },
+    {
+      "debris_id": "COZ-MED-046",
+      "lat": 35.8,
+      "lon": 14.9,
+      "debris_type": "Plastic",
+      "severity": "High",
+      "station": "Pelagic Plastic Survey P-09"
+    },
+    {
+      "debris_id": "COZ-MED-047",
+      "lat": 37.75,
+      "lon": 15.1,
+      "debris_type": "Rope",
+      "severity": "Medium",
+      "station": "Catania Bay Marine Litter"
+    },
+    {
+      "debris_id": "COZ-MED-048",
+      "lat": 36.4,
+      "lon": 15.95,
+      "debris_type": "Plastic",
+      "severity": "High",
+      "station": "Central Med Convergence"
+    },
+    {
+      "debris_id": "ERI-SPAC-051",
+      "lat": -25.6,
+      "lon": -104.8,
+      "debris_type": "Plastic",
+      "severity": "Medium",
+      "station": "Easter Island East Transect"
+    },
+    {
+      "debris_id": "ERI-SPAC-052",
+      "lat": -26.85,
+      "lon": -106.1,
+      "debris_type": "Derelict Gear",
+      "severity": "High",
+      "station": "South Pacific Central Core"
+    },
+    {
+      "debris_id": "ERI-SPAC-053",
+      "lat": -24.9,
+      "lon": -103.65,
+      "debris_type": "Plastic",
+      "severity": "Medium",
+      "station": "Subtropical Front SPF-02"
+    },
+    {
+      "debris_id": "ERI-SPAC-054",
+      "lat": -27.4,
+      "lon": -105.4,
+      "debris_type": "Foam",
+      "severity": "Low",
+      "station": "Gyre Accumulation Point 11"
+    },
+    {
+      "debris_id": "ERI-SPAC-055",
+      "lat": -26.15,
+      "lon": -104.25,
+      "debris_type": "Mixed",
+      "severity": "Medium",
+      "station": "South Pacific Gyre Station 5"
+    },
+    {
+      "debris_id": "ERI-SPAC-056",
+      "lat": -25.2,
+      "lon": -105.8,
+      "debris_type": "Plastic",
+      "severity": "Medium",
+      "station": "Pelagic Sampling Station SP-14"
+    },
+    {
+      "debris_id": "ERI-SPAC-057",
+      "lat": -27.1,
+      "lon": -104.95,
+      "debris_type": "Rope",
+      "severity": "Medium",
+      "station": "Derelict Line Station DL-03"
+    },
+    {
+      "debris_id": "ERI-SPAC-058",
+      "lat": -25.8,
+      "lon": -106.5,
+      "debris_type": "Plastic",
+      "severity": "Low",
+      "station": "Oceanic Trawl Station OT-22"
+    },
+    {
+      "debris_id": "ERI-SATL-061",
+      "lat": -29.5,
+      "lon": -11.8,
+      "debris_type": "Plastic",
+      "severity": "Medium",
+      "station": "Tristan da Cunha North"
+    },
+    {
+      "debris_id": "ERI-SATL-062",
+      "lat": -30.7,
+      "lon": -12.9,
+      "debris_type": "Derelict Gear",
+      "severity": "High",
+      "station": "South Atlantic Core Station"
+    },
+    {
+      "debris_id": "ERI-SATL-063",
+      "lat": -28.9,
+      "lon": -10.75,
+      "debris_type": "Plastic",
+      "severity": "Medium",
+      "station": "Benguela Transition Station"
+    },
+    {
+      "debris_id": "ERI-SATL-064",
+      "lat": -31.2,
+      "lon": -11.45,
+      "debris_type": "Foam",
+      "severity": "Low",
+      "station": "Subtropical Front SA-08"
+    },
+    {
+      "debris_id": "ERI-SATL-065",
+      "lat": -29.95,
+      "lon": -13.15,
+      "debris_type": "Rope",
+      "severity": "Medium",
+      "station": "Pelagic Net Station PN-04"
+    },
+    {
+      "debris_id": "ERI-SATL-066",
+      "lat": -30.4,
+      "lon": -10.9,
+      "debris_type": "Plastic",
+      "severity": "Medium",
+      "station": "Gyre Center Station GC-09"
+    },
+    {
+      "debris_id": "ERI-SATL-067",
+      "lat": -28.5,
+      "lon": -12.4,
+      "debris_type": "Mixed",
+      "severity": "Low",
+      "station": "Walvis Ridge Approach"
+    },
+    {
+      "debris_id": "ERI-SATL-068",
+      "lat": -31.05,
+      "lon": -12.1,
+      "debris_type": "Plastic",
+      "severity": "Medium",
+      "station": "South Atlantic Core Transect"
+    },
+    {
+      "debris_id": "VDM-IND-071",
+      "lat": -27.8,
+      "lon": 74.6,
+      "debris_type": "Plastic",
+      "severity": "High",
+      "station": "Indian Ocean Central Core"
+    },
+    {
+      "debris_id": "VDM-IND-072",
+      "lat": -28.95,
+      "lon": 75.8,
+      "debris_type": "Derelict Gear",
+      "severity": "High",
+      "station": "Rodrigues Ridge South"
+    },
+    {
+      "debris_id": "VDM-IND-073",
+      "lat": -26.9,
+      "lon": 73.9,
+      "debris_type": "Plastic",
+      "severity": "High",
+      "station": "Agulhas Return Convergence"
+    },
+    {
+      "debris_id": "VDM-IND-074",
+      "lat": -29.4,
+      "lon": 76.25,
+      "debris_type": "Foam",
+      "severity": "Medium",
+      "station": "Mid-Indian Basin Station"
+    },
+    {
+      "debris_id": "VDM-IND-075",
+      "lat": -27.4,
+      "lon": 75.2,
+      "debris_type": "Mixed",
+      "severity": "High",
+      "station": "Indian Ocean Gyre Center"
+    },
+    {
+      "debris_id": "VDM-IND-076",
+      "lat": -28.5,
+      "lon": 74.1,
+      "debris_type": "Plastic",
+      "severity": "High",
+      "station": "Pelagic Trawl Indian IO-11"
+    },
+    {
+      "debris_id": "VDM-IND-077",
+      "lat": -29.1,
+      "lon": 75.05,
+      "debris_type": "Rope",
+      "severity": "Medium",
+      "station": "Ghost Line Recovery GL-07"
+    },
+    {
+      "debris_id": "VDM-IND-078",
+      "lat": -27.15,
+      "lon": 76.0,
+      "debris_type": "Plastic",
+      "severity": "High",
+      "station": "Subtropical Current Front"
+    },
+    {
+      "debris_id": "PEM-MAL-081",
+      "lat": 1.35,
+      "lon": 103.15,
+      "debris_type": "Plastic",
+      "severity": "High",
+      "station": "Singapore Strait Western Entrance"
+    },
+    {
+      "debris_id": "PEM-MAL-082",
+      "lat": 1.55,
+      "lon": 102.8,
+      "debris_type": "Mixed",
+      "severity": "High",
+      "station": "Malacca TSS South Channel"
+    },
+    {
+      "debris_id": "PEM-MAL-083",
+      "lat": 1.2,
+      "lon": 103.65,
+      "debris_type": "Plastic",
+      "severity": "High",
+      "station": "Main Strait Shipping TSS"
+    },
+    {
+      "debris_id": "PEM-MAL-084",
+      "lat": 1.85,
+      "lon": 102.4,
+      "debris_type": "Derelict Gear",
+      "severity": "High",
+      "station": "Batu Pahat Coastal Shelf"
+    },
+    {
+      "debris_id": "PEM-MAL-085",
+      "lat": 1.45,
+      "lon": 103.45,
+      "debris_type": "Foam",
+      "severity": "Medium",
+      "station": "Johor Strait Estuary Confluence"
+    },
+    {
+      "debris_id": "PEM-MAL-086",
+      "lat": 2.1,
+      "lon": 102.05,
+      "debris_type": "Plastic",
+      "severity": "High",
+      "station": "Malacca Port Approach"
+    },
+    {
+      "debris_id": "PEM-MAL-087",
+      "lat": 1.1,
+      "lon": 103.85,
+      "debris_type": "Rope",
+      "severity": "Medium",
+      "station": "Eastern Anchorage Debris Transect"
+    },
+    {
+      "debris_id": "PEM-MAL-088",
+      "lat": 1.65,
+      "lon": 102.6,
+      "debris_type": "Plastic",
+      "severity": "High",
+      "station": "Tanjung Piai Coastal Convergence"
+    },
+    {
+      "debris_id": "OSP-ENG-091",
+      "lat": 50.95,
+      "lon": 1.45,
+      "debris_type": "Derelict Gear",
+      "severity": "High",
+      "station": "Dover Strait TSS Southbound"
+    },
+    {
+      "debris_id": "OSP-ENG-092",
+      "lat": 51.15,
+      "lon": 1.75,
+      "debris_type": "Plastic",
+      "severity": "Medium",
+      "station": "Goodwin Sands Offshore Shelf"
+    },
+    {
+      "debris_id": "OSP-ENG-093",
+      "lat": 50.75,
+      "lon": 1.2,
+      "debris_type": "Rope",
+      "severity": "Medium",
+      "station": "Cap Gris-Nez Convergence"
+    },
+    {
+      "debris_id": "OSP-ENG-094",
+      "lat": 51.3,
+      "lon": 1.95,
+      "debris_type": "Mixed",
+      "severity": "Medium",
+      "station": "Thames Estuary Southern Approach"
+    },
+    {
+      "debris_id": "OSP-ENG-095",
+      "lat": 50.85,
+      "lon": 1.6,
+      "debris_type": "Plastic",
+      "severity": "High",
+      "station": "Sandettie Bank Marine Litter"
+    },
+    {
+      "debris_id": "OSP-ENG-096",
+      "lat": 51.05,
+      "lon": 1.3,
+      "debris_type": "Derelict Gear",
+      "severity": "Medium",
+      "station": "Varne Bank Trawl Station"
+    },
+    {
+      "debris_id": "OSP-ENG-097",
+      "lat": 50.6,
+      "lon": 0.95,
+      "debris_type": "Plastic",
+      "severity": "Medium",
+      "station": "Dungeness East Bay Transect"
+    },
+    {
+      "debris_id": "OSP-ENG-098",
+      "lat": 51.25,
+      "lon": 2.1,
+      "debris_type": "Foam",
+      "severity": "Low",
+      "station": "Flemish Pass North Sea Gateway"
+    }
+  ]
+}

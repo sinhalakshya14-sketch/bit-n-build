@@ -43,7 +43,7 @@ from data.reference import load_companies, load_lighthouses, load_ports
 # ─────────────────────────────────────────────────────────────────────────── #
 st.set_page_config(
     page_title="MaritimeMAS — Global Operations",
-    page_icon="⚓",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -54,210 +54,230 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
-    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
-    .stApp { background: #060a12; color: #e2e8f0; }
+    html, body, [class*="css"] { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .stApp { background: #000000; color: #DDDDDD; }
+    
+    /* Animations */
+    @keyframes fadein {
+        from { opacity: 0; transform: translateY(10px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    
+    .stApp > div {
+        animation: fadein 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
 
-    /* Give the custom header room to breathe below Streamlit's own top bar
-       so it never collides with the "Connecting…/Deploy" toolbar. */
-    .block-container { padding-top: 0.6rem !important; padding-bottom: 0.4rem; max-width: 100% !important; padding-left: 0.6rem; padding-right: 0.6rem; }
-    #MainMenu, footer { visibility: hidden; }
-
-    h1, h2, h3, h4 { letter-spacing: -0.01em; }
-    hr { border-color: rgba(148, 163, 184, 0.12); margin: 1.4rem 0; }
-
-    /* ── Header Banner ────────────────────────────────────────────────── */
+    /* Header Banner */
     .mas-header {
-        background: linear-gradient(135deg, rgba(13, 27, 62, 0.97) 0%, rgba(15, 35, 75, 0.97) 50%, rgba(10, 45, 90, 0.97) 100%);
-        border: 1px solid rgba(56, 189, 248, 0.25);
-        border-radius: 14px;
-        padding: 18px 26px;
-        margin-bottom: 18px;
+        background: #000000;
+        border: 1px solid #333333;
+        border-radius: 12px;
+        padding: 20px 28px;
+        margin-bottom: 20px;
         display: flex;
         align-items: center;
         justify-content: space-between;
         flex-wrap: wrap;
         gap: 10px;
-        box-shadow: 0 10px 36px rgba(0, 90, 220, 0.18);
+        transition: border-color 0.3s ease;
     }
-    .mas-title-group { display: flex; align-items: center; gap: 14px; }
+    .mas-header:hover { border-color: #555555; }
+    .mas-title-group { display: flex; align-items: center; gap: 16px; }
     .mas-title-group .mas-icon {
-        width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0;
-        background: linear-gradient(135deg, #0ea5e9, #1d4ed8);
+        width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
+        background: #111111;
         display: flex; align-items: center; justify-content: center;
-        font-size: 1.35rem; box-shadow: 0 4px 14px rgba(14,165,233,0.4);
+        font-size: 1.5rem; 
+        border: 1px solid #333333;
     }
-    .mas-title-group h1 { color: #f8fafc; font-size: 1.4rem; font-weight: 700; margin: 0; }
-    .mas-title-group p  { color: #93a5c2; font-size: 0.8rem; margin: 3px 0 0 0; }
-    .mas-header-right { display: flex; align-items: center; gap: 10px; }
+    .mas-title-group h1 { color: #FFFFFF; font-size: 1.6rem; font-weight: 800; margin: 0; }
+    .mas-title-group p  { color: #AAAAAA; font-size: 0.85rem; margin: 4px 0 0 0; font-weight: 500; }
+    
+    .mas-header-right { display: flex; align-items: center; gap: 12px; }
     .mas-tick-pill {
-        font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #cbd5e1;
-        background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
-        padding: 4px 10px; border-radius: 8px;
+        font-weight: 600; font-size: 0.75rem; color: #FFFFFF;
+        background: #111111; border: 1px solid #333333;
+        padding: 6px 12px; border-radius: 20px;
     }
+    
     .pulse-dot {
-        width: 8px; height: 8px; border-radius: 50%; background: #34d399; display: inline-block;
-        margin-right: 6px; box-shadow: 0 0 0 rgba(52,211,153,0.6); animation: pulse 2s infinite;
+        width: 8px; height: 8px; border-radius: 50%; background: #FFFFFF; display: inline-block;
+        margin-right: 6px; box-shadow: 0 0 0 rgba(255,255,255,0.6); animation: pulse 2s infinite;
     }
     @keyframes pulse {
-        0%   { box-shadow: 0 0 0 0 rgba(52,211,153,0.55); }
-        70%  { box-shadow: 0 0 0 7px rgba(52,211,153,0); }
-        100% { box-shadow: 0 0 0 0 rgba(52,211,153,0); }
+        0%   { box-shadow: 0 0 0 0 rgba(255,255,255,0.4); }
+        70%  { box-shadow: 0 0 0 6px rgba(255,255,255,0); }
+        100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
     }
 
-    /* ── KPI Strip (top of main content) ─────────────────────────────── */
-    .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
+    /* KPI Strip */
+    .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
     .kpi-card {
-        background: rgba(13, 27, 56, 0.75);
-        border: 1px solid rgba(56, 189, 248, 0.16);
+        background: #000000;
+        border: 1px solid #333333;
         border-radius: 12px;
-        padding: 14px 18px;
-        transition: border-color 0.15s ease, transform 0.15s ease;
+        padding: 18px 22px;
+        transition: transform 0.3s ease, border-color 0.3s ease;
     }
-    .kpi-card:hover { border-color: rgba(56,189,248,0.5); transform: translateY(-2px); }
-    .kpi-label { color: #8ea2c2; font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; display:flex; align-items:center; gap:6px; }
-    .kpi-value { color: #f1f5f9; font-size: 1.7rem; font-weight: 700; margin-top: 4px; line-height: 1.2; }
-    .kpi-value.accent-blue  { color: #38bdf8; }
-    .kpi-value.accent-red   { color: #f87171; }
-    .kpi-value.accent-amber { color: #fbbf24; }
-    .kpi-value.accent-green { color: #34d399; }
-    .kpi-sub { color: #64748b; font-size: 0.7rem; margin-top: 3px; }
+    .kpi-card:hover { transform: translateY(-4px); border-color: #777777; }
+    .kpi-label { color: #AAAAAA; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; display:flex; align-items:center; gap:6px; }
+    .kpi-value { color: #FFFFFF; font-size: 2rem; font-weight: 800; margin-top: 6px; line-height: 1.1; }
+    .kpi-sub { color: #888888; font-size: 0.75rem; margin-top: 4px; font-weight: 500; }
 
-    /* ── Sidebar Metric Cards (2-col grid) ───────────────────────────── */
-    .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    /* Sidebar Metric Cards */
+    .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .metric-card {
-        background: rgba(13, 27, 56, 0.85);
-        border: 1px solid rgba(30, 80, 160, 0.4);
-        border-radius: 10px;
-        padding: 10px 12px;
-        box-shadow: 0 4px 16px rgba(0, 40, 100, 0.15);
-        transition: transform 0.15s ease, border-color 0.15s ease;
+        background: #000000;
+        border: 1px solid #333333;
+        border-radius: 12px;
+        padding: 14px;
+        transition: transform 0.3s ease, border-color 0.3s ease;
     }
-    .metric-card:hover { border-color: #3b82f6; transform: translateY(-1px); }
-    .metric-label { color: #94a3b8; font-size: 0.63rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
-    .metric-value { color: #38bdf8; font-size: 1.25rem; font-weight: 700; line-height: 1.25; margin-top: 2px; }
-    .metric-sub   { color: #64748b; font-size: 0.62rem; margin-top: 2px; line-height: 1.3; }
+    .metric-card:hover { border-color: #666666; transform: translateY(-2px); }
+    .metric-label { color: #AAAAAA; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+    .metric-value { color: #FFFFFF; font-size: 1.4rem; font-weight: 800; line-height: 1.2; margin-top: 4px; }
+    .metric-sub   { color: #888888; font-size: 0.7rem; margin-top: 4px; line-height: 1.3; font-weight: 500; }
 
-    /* ── Section Headings ────────────────────────────────────────────── */
+    /* Section Headings */
     .section-heading {
-        display: flex; align-items: center; gap: 8px;
-        color: #e2e8f0; font-size: 0.95rem; font-weight: 700;
-        margin: 4px 0 10px 0;
-        padding-bottom: 8px;
-        border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+        display: flex; align-items: center; gap: 10px;
+        color: #FFFFFF; font-size: 1.1rem; font-weight: 800;
+        margin: 8px 0 14px 0;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #333333;
     }
     .section-heading .tag {
-        font-size: 0.62rem; font-weight: 600; color: #64748b;
-        background: rgba(148,163,184,0.08); padding: 2px 8px; border-radius: 6px;
+        font-size: 0.65rem; font-weight: 700; color: #DDDDDD;
+        background: #222222; padding: 4px 10px; border-radius: 20px;
         text-transform: uppercase; letter-spacing: 0.05em;
     }
 
-    /* ── Map Legend ───────────────────────────────────────────────────── */
+    /* Map Legend */
     .legend-bar {
-        display: flex; gap: 18px; flex-wrap: wrap; align-items: center;
-        margin-bottom: 8px; padding: 8px 16px;
-        background: rgba(13,27,56,0.6); border: 1px solid rgba(56,189,248,0.12);
-        border-radius: 8px;
+        display: flex; gap: 20px; flex-wrap: wrap; align-items: center;
+        margin-bottom: 12px; padding: 12px 20px;
+        background: #000000; border: 1px solid #333333;
+        border-radius: 12px;
     }
-    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.74rem; color: #cbd5e1; }
-    .legend-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
-    .legend-line { width: 18px; height: 0; display: inline-block; border-top: 3px solid; }
+    .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: #BBBBBB; font-weight: 500; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .legend-line { width: 20px; height: 0; display: inline-block; border-top: 3px solid; }
     .legend-line.dashed { border-top-style: dashed; }
-    .legend-sq { width: 10px; height: 10px; display: inline-block; border-radius: 2px; }
+    .legend-sq { width: 12px; height: 12px; display: inline-block; border-radius: 3px; }
 
-    /* ── Route Comparison Bar ────────────────────────────────────────── */
+    /* Route Comparison Bar */
     .route-bar {
-        background: rgba(13,27,56,0.85); border: 1px solid rgba(59,130,246,0.28);
-        border-radius: 10px; padding: 12px 18px; margin-top: 8px;
+        background: #000000; border: 1px solid #333333;
+        border-radius: 12px; padding: 16px 22px; margin-top: 12px;
         display: flex; justify-content: space-between; align-items: center;
-        flex-wrap: wrap; gap: 8px; font-size: 0.8rem; color: #cbd5e1;
+        flex-wrap: wrap; gap: 12px; font-size: 0.85rem; color: #CCCCCC;
     }
-    .route-bar b { color: #e2e8f0; }
+    .route-bar b { color: #FFFFFF; font-weight: 700; }
 
-    /* ── Explainability Panel ────────────────────────────────────────── */
+    /* Explainability Panel */
     .explain-box {
-        background: rgba(26, 18, 9, 0.9);
-        border-left: 4px solid #f59e0b;
-        border-radius: 0 8px 8px 0;
+        background: #000000;
+        border: 1px solid #444444;
+        border-left: 4px solid #FFFFFF;
+        border-radius: 8px;
+        padding: 16px 20px;
+        margin-bottom: 14px;
+        font-size: 0.85rem;
+        color: #DDDDDD;
+    }
+    .explain-metric { font-weight: 700; color: #FFFFFF; }
+
+    /* Event Feed */
+    .event-item {
+        background: #000000;
+        border: 1px solid #333333;
+        border-left: 3px solid #777777;
+        border-radius: 8px;
         padding: 12px 16px;
         margin-bottom: 10px;
-        font-size: 0.82rem;
-        color: #fef3c7;
+        font-size: 0.85rem;
+        color: #CCCCCC;
+        line-height: 1.5;
+        display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+        font-weight: 500;
+        transition: background 0.3s ease;
     }
-    .explain-metric { font-family: 'JetBrains Mono', monospace; color: #fbbf24; font-weight: 600; }
-
-    /* ── Event Feed ───────────────────────────────────────────────────── */
-    .event-item {
-        background: rgba(13, 27, 56, 0.75);
-        border-left: 3px solid #3b82f6;
-        border-radius: 0 6px 6px 0;
-        padding: 8px 12px;
-        margin-bottom: 6px;
-        font-size: 0.78rem;
-        color: #cbd5e1;
-        line-height: 1.4;
-        display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;
-    }
-    .event-item.warn { border-left-color: #f59e0b; color: #fde68a; background: rgba(35, 25, 10, 0.75); }
-    .event-item.crit { border-left-color: #ef4444; color: #fca5a5; background: rgba(40, 15, 15, 0.75); }
+    .event-item:hover { background: #0A0A0A; }
+    .event-item.warn { border-left-color: #AAAAAA; }
+    .event-item.crit { border-left-color: #FFFFFF; }
     .event-count {
-        flex-shrink: 0; font-size: 0.65rem; font-weight: 700; color: #0f172a;
-        background: #94a3b8; border-radius: 8px; padding: 1px 7px; white-space: nowrap;
+        flex-shrink: 0; font-size: 0.7rem; font-weight: 800; color: #000000;
+        background: #FFFFFF; border-radius: 12px; padding: 2px 8px; white-space: nowrap;
     }
 
-    /* ── Status Badges ────────────────────────────────────────────────── */
+    /* Status Badges */
     .badge {
-        display: inline-block; border-radius: 12px;
-        padding: 2px 10px; font-size: 0.68rem; font-weight: 600;
-        letter-spacing: 0.04em;
+        display: inline-block; border-radius: 16px;
+        padding: 4px 12px; font-size: 0.7rem; font-weight: 700;
+        letter-spacing: 0.05em;
     }
-    .badge-real { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
-    .badge-syn  { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+    .badge-real { background: #111111; color: #FFFFFF; border: 1px solid #444444; }
+    .badge-syn  { background: #222222; color: #DDDDDD; border: 1px solid #555555; }
 
-    /* ── Data Authenticity Rows ───────────────────────────────────────── */
+    /* Data Authenticity Rows */
     .data-row {
-        display: flex; align-items: flex-start; gap: 8px;
-        padding: 6px 0; border-bottom: 1px solid rgba(148,163,184,0.08);
+        display: flex; align-items: flex-start; gap: 10px;
+        padding: 8px 0; border-bottom: 1px solid #222222;
     }
     .data-row:last-child { border-bottom: none; }
-    .data-row-text { font-size: 0.72rem; color: #94a3b8; line-height: 1.35; }
-    .data-row-text b { color: #cbd5e1; font-size: 0.76rem; }
+    .data-row-text { font-size: 0.8rem; color: #AAAAAA; line-height: 1.4; font-weight: 500; }
+    .data-row-text b { color: #FFFFFF; font-size: 0.85rem; font-weight: 700; }
 
-    /* Overlay sidebar: does not shrink the map. Collapsed by default; hover/click expands. */
+    /* Overlay sidebar */
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0b1220 0%, #101a30 100%) !important;
-        border-right: 1px solid rgba(56, 189, 248, 0.35);
+        background: #000000 !important;
+        border-right: 1px solid #333333;
         z-index: 400;
     }
     [data-testid="stSidebar"] * {
-        color: #e2e8f0 !important;
+        color: #DDDDDD !important;
     }
     [data-testid="stSidebar"] label,
     [data-testid="stSidebar"] p,
     [data-testid="stSidebar"] span,
     [data-testid="stSidebar"] .stMarkdown {
-        color: #e2e8f0 !important;
+        color: #DDDDDD !important;
         opacity: 1 !important;
     }
     [data-testid="stSidebar"] .stButton button {
-        border-radius: 8px; font-weight: 600; font-size: 0.82rem;
-        color: #f8fafc !important;
+        border-radius: 8px; font-weight: 700; font-size: 0.85rem;
+        background: #000000;
+        color: #FFFFFF !important;
+        border: 1px solid #555555;
+        transition: all 0.2s ease;
+    }
+    [data-testid="stSidebar"] .stButton button:hover {
+        border-color: #FFFFFF; background: #111111;
     }
     div[data-testid="stAppViewContainer"] > section.main {
         margin-left: 0 !important;
     }
     [data-testid="stBottom"] {
-        background: rgba(8, 14, 28, 0.92);
-        border-top: 1px solid rgba(56, 189, 248, 0.25);
-        color: #cbd5e1;
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.75rem;
+        background: #000000;
+        border-top: 1px solid #333333;
+        color: #888888;
+        font-size: 0.8rem;
+        font-weight: 500;
     }
+
+    /* Streamlit overrides for inputs and expanders */
+    .stTextInput input {
+        border-radius: 8px; border: 1px solid #444444; background: #000000; color: #FFFFFF; font-weight: 500;
+    }
+    .stTextInput input:focus { border-color: #FFFFFF; box-shadow: 0 0 0 1px #FFFFFF; }
+    .stExpander { border: 1px solid #333333; border-radius: 12px; background: #000000; }
+    .stExpander summary { color: #FFFFFF !important; font-weight: 700; }
 
     /* Footer */
     .mas-footer {
-        text-align: center; color: #4b5c78; font-size: 0.7rem; padding: 18px 0 4px 0;
+        text-align: center; color: #666666; font-size: 0.75rem; padding: 20px 0 10px 0; font-weight: 500;
     }
     </style>
     """,
@@ -282,7 +302,7 @@ if "initialised" not in st.session_state:
     st.session_state.playback_speed = 3
     st.session_state.show_gfw = True
     st.session_state.show_before_after = True
-    st.session_state.map_style_choice = "🌊 MarineTraffic Light Nautical"
+    st.session_state.map_style_choice = " CartoDB Dark Matter"
     st.session_state.planner_route = None
     st.session_state.planner_baseline = None
     st.session_state.planner_labels = None
@@ -331,11 +351,10 @@ def _apply_basemap(folium_map, choice: str) -> None:
             overlay=False,
             control=True,
         ).add_to(folium_map)
-    elif "MarineTraffic" in choice:
+    elif "CartoDB" in choice:
         folium.TileLayer(
-            tiles="https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
-            attr="Carto Voyager MarineTraffic",
-            name="MarineTraffic Light Nautical",
+            tiles="cartodbdark_matter",
+            name="CartoDB Dark Matter",
             overlay=False,
             control=True,
         ).add_to(folium_map)
@@ -437,7 +456,7 @@ def _render_analyst_watchlist_bar() -> None:
     the old `analyst_name` key was owned by the main script and rebuilt the tables.
     """
     st.markdown(
-        '<div class="section-heading">👤 Analyst watchlist<span class="tag">press Enter to commit</span></div>',
+        '<div class="section-heading"> Analyst watchlist<span class="tag">press Enter to commit</span></div>',
         unsafe_allow_html=True,
     )
     st.text_input(
@@ -448,7 +467,7 @@ def _render_analyst_watchlist_bar() -> None:
     )
     _sync_analyst_name()
     if not _current_analyst():
-        st.info("Type your name and press Enter — your watchlist and ⭐ Add buttons appear right here, under the map.")
+        st.info("Type your name and press Enter — your watchlist and  Add buttons appear right here, under the map.")
     else:
         st.success(f"Signed in as {_current_analyst()}. Star flagged vessels in the expander below.")
 
@@ -458,7 +477,7 @@ def _render_header(state: dict) -> None:
         f"""
         <div class="mas-header">
           <div class="mas-title-group">
-            <div class="mas-icon">⚓</div>
+            <div class="mas-icon"></div>
             <div>
               <h1>MaritimeMAS — Global Fleet Operations</h1>
               <p>Live AIS density · NOAA weather · IsolationForest dark-vessel scan</p>
@@ -480,22 +499,22 @@ def _render_kpi_strip(state: dict) -> None:
         f"""
         <div class="kpi-row">
           <div class="kpi-card" title="Calculated dynamically: Optimal A* vs. naive distance-based path for the currently simulated corridor.">
-            <div class="kpi-label">⛽ Fuel Savings (Demo Corridor)</div>
+            <div class="kpi-label"> Fuel Savings (Demo Corridor)</div>
             <div class="kpi-value accent-blue">{_m['fuel_savings_pct']:.1f}%</div>
             <div class="kpi-sub">Optimized route vs. naive straight line</div>
           </div>
           <div class="kpi-card" title="Computed live per-tick from the anomaly detection model. Precision/Recall independently scored against random ground-truth masking (not circular).">
-            <div class="kpi-label">🚨 Flagged (Current Scan)</div>
+            <div class="kpi-label"> Flagged (Current Scan)</div>
             <div class="kpi-value accent-red">{_m['vessels_flagged']}</div>
             <div class="kpi-sub">Precision {_m['precision']:.0%} · Recall {_m['recall']:.0%}</div>
           </div>
           <div class="kpi-card" title="Live count of active debris hotspots currently assigned to collector vessels.">
-            <div class="kpi-label">🗑️ Debris Hotspots Covered</div>
+            <div class="kpi-label"> Debris Hotspots Covered</div>
             <div class="kpi-value accent-amber">{_m['hotspots_covered']}</div>
             <div class="kpi-sub">Nearest-collector assignment</div>
           </div>
           <div class="kpi-card" title="Cumulative count over the entire simulation session of how many times the Route Agent recalculated a path.">
-            <div class="kpi-label">🔄 Dynamic Reroutes (Session)</div>
+            <div class="kpi-label"> Dynamic Reroutes (Session)</div>
             <div class="kpi-value accent-green">{_m['reroute_count']}</div>
             <div class="kpi-sub">Cross-agent obstacle avoidance</div>
           </div>
@@ -506,7 +525,7 @@ def _render_kpi_strip(state: dict) -> None:
 
 
 def _render_event_feed(state: dict) -> None:
-    st.markdown('<div class="section-heading">📡 Real-Time Event Feed</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-heading"> Real-Time Event Feed</div>', unsafe_allow_html=True)
     event_log = state.get("event_log", [])
     if not event_log:
         st.info("System initializing...")
@@ -522,7 +541,7 @@ def _render_event_feed(state: dict) -> None:
             break
     for g in grouped:
         ev = g["ev"]
-        is_warn = "⚠️" in ev or "Rerouted" in ev or "flagged" in ev.lower()
+        is_warn = "" in ev or "Rerouted" in ev or "flagged" in ev.lower()
         is_crit = "Hurricane" in ev or "ALERT" in ev or "WATCHLIST RE-ALERT" in ev
         cls = "crit" if is_crit else ("warn" if is_warn else "")
         count_badge = f'<span class="event-count">×{g["count"]}</span>' if g["count"] > 1 else ""
@@ -550,7 +569,7 @@ def _render_single_explain_card(fv: dict, analyst: str, watched_ids: set, state:
     note = fv.get("memory_note") or ""
     scan_c = fv.get("scan_confidence", conf)
     realert_badge = (
-        '<span class="badge badge-real">⭐ RE-ALERT</span>' if on_watch else ""
+        '<span class="badge badge-real"> RE-ALERT</span>' if on_watch else ""
     )
     
     # Optional styling adjustments based on prefix to help differentiate search results vs flagged
@@ -597,14 +616,14 @@ def _render_single_explain_card(fv: dict, analyst: str, watched_ids: set, state:
     if analyst:
         if on_watch:
             st.button(
-                "✓ On watchlist",
+                " On watchlist",
                 key=f"{key_prefix}wl_on_{vid}",
                 on_click=_watchlist_remove,
                 args=(vid,),
             )
         else:
             st.button(
-                "⭐ Add to watchlist",
+                " Add to watchlist",
                 key=f"{key_prefix}wl_add_{vid}",
                 on_click=_watchlist_add,
                 args=(vid,),
@@ -623,7 +642,7 @@ def _render_single_explain_card(fv: dict, analyst: str, watched_ids: set, state:
                 st.json({"input": call.get("input"), "output": call.get("output")})
             st.markdown(brief.get("summary") or "")
     else:
-        if st.button("🔍 Generate investigative brief for this vessel", key=f"{key_prefix}gen_brief_{vid}"):
+        if st.button(" Generate investigative brief for this vessel", key=f"{key_prefix}gen_brief_{vid}"):
             with st.spinner("Generating brief..."):
                 orchestrator.generate_single_brief(vid)
             st.rerun()
@@ -635,7 +654,7 @@ def _render_flag_explain(state: dict) -> None:
     
     active_search = st.session_state.get("active_search_vessel")
     if active_search:
-        st.markdown(f"##### 🔍 Searched Vessel — {active_search}")
+        st.markdown(f"#####  Searched Vessel — {active_search}")
         det_by_id = state.get("detection_by_id") or {}
         fv = det_by_id.get(active_search)
         if not fv:
@@ -649,12 +668,12 @@ def _render_flag_explain(state: dict) -> None:
         _render_single_explain_card(fv, analyst, watched_ids, state, key_prefix="search_")
         st.markdown("<br/>", unsafe_allow_html=True)
 
-    with st.expander("⭐ Add to watchlist — flagged vessels this tick", expanded=True):
+    with st.expander(" Add to watchlist — flagged vessels this tick", expanded=True):
         flagged = state.get("flagged_vessels", [])
         if not flagged:
             st.success("No dark vessels flagged in current scan frame.")
             return
-        st.markdown("##### 🚨 Flagged Dark Vessels — Anomaly Analysis")
+        st.markdown("#####  Flagged Dark Vessels — Anomaly Analysis")
         shown = sorted(flagged, key=lambda r: r.get("confidence", 0), reverse=True)[:12]
         for fv in shown:
             _render_single_explain_card(fv, analyst, watched_ids, state, key_prefix="")
@@ -669,18 +688,18 @@ def _render_watchlist_panel(state: dict) -> None:
         return
     st.markdown("---")
     st.markdown(
-        f'<div class="section-heading">⭐ My Watchlist<span class="tag">{analyst}</span></div>',
+        f'<div class="section-heading"> My Watchlist<span class="tag">{analyst}</span></div>',
         unsafe_allow_html=True,
     )
     items = storage.get_watchlist(analyst)
     flagged_ids = {r["vessel_id"] for r in (state.get("flagged_vessels") or [])}
     if not items:
-        st.caption("No vessels on your watchlist yet. Use ⭐ Add to watchlist on a flagged vessel below.")
+        st.caption("No vessels on your watchlist yet. Use  Add to watchlist on a flagged vessel below.")
         return
     for row in items:
         vid = row["vessel_id"]
         flagged_now = vid in flagged_ids
-        badge = "⭐ RE-ALERT — flagged this tick" if flagged_now else "not flagged this tick"
+        badge = " RE-ALERT — flagged this tick" if flagged_now else "not flagged this tick"
         st.markdown(f"**{vid}** · added {row['added_at']} UTC · {badge}")
         with st.form(key=f"wl_note_form_{vid}"):
             note_txt = st.text_input("Add a case note")
@@ -713,7 +732,7 @@ def _maybe_log_watchlist_realerts(live: dict) -> None:
     if hits:
         shown = ", ".join(hits[:8])
         extra = f" (+{len(hits) - 8} more)" if len(hits) > 8 else ""
-        orchestrator.append_event(f"⭐ WATCHLIST RE-ALERT: {shown}{extra} flagged again this tick")
+        orchestrator.append_event(f" WATCHLIST RE-ALERT: {shown}{extra} flagged again this tick")
 
 
 @st.cache_data
@@ -1120,7 +1139,7 @@ def _live_ops_panel(header_slot, kpi_slot, map_feed_slot=None, explain_slot=None
         with map_feed_slot:
             map_col, feed_col = st.columns([3.2, 1.3])
             with map_col:
-                st.markdown('<div class="section-heading">🗺️ Live Operations Map</div>', unsafe_allow_html=True)
+                st.markdown('<div class="section-heading"> Live Operations Map</div>', unsafe_allow_html=True)
                 
                 with st.form("vessel_search_form"):
                     cols = st.columns([3, 1])
@@ -1150,7 +1169,7 @@ def _live_ops_panel(header_slot, kpi_slot, map_feed_slot=None, explain_slot=None
                     """,
                     unsafe_allow_html=True,
                 )
-                choice = st.session_state.get("map_style_choice", "🛰️ Google Maps Satellite Hybrid")
+                choice = st.session_state.get("map_style_choice", " Google Maps Satellite Hybrid")
                 map_html, rebuilt, build_ms = _get_cached_live_folium_map(live, choice)
                 if rebuilt:
                     with st.spinner("Rebuilding live map (~2,000 vessels)…"):
@@ -1176,7 +1195,7 @@ def _live_ops_panel(header_slot, kpi_slot, map_feed_slot=None, explain_slot=None
                     st.markdown(
                         f"""
                         <div class="route-bar">
-                          <div>🧭 <b>Reference Corridor (Demo):</b> Houston/Galveston (29.3°N, 94.8°W) &nbsp;➔&nbsp; New Orleans (29.9°N, 90.1°W)</div>
+                          <div> <b>Reference Corridor (Demo):</b> Houston/Galveston (29.3°N, 94.8°W) &nbsp;➔&nbsp; New Orleans (29.9°N, 90.1°W)</div>
                           <div><b>Naive:</b> <span style="color:#f87171">{bl_cost:.1f}</span> &nbsp;·&nbsp; <b>Optimized:</b> <span style="color:#38bdf8">{opt_cost:.1f}</span> &nbsp;·&nbsp; <b>Fuel saved:</b> <span style="color:#34d399;font-weight:700">{sav:.1f}%</span></div>
                         </div>
                         """,
@@ -1255,7 +1274,7 @@ def _render_reference_page(title: str, df: pd.DataFrame, kind: str, color: str, 
         key=f"download_{kind}_csv",
     )
     st.dataframe(shown, width="stretch", hide_index=True)
-    choice = st.session_state.get("map_style_choice", "🛰️ Google Maps Satellite Hybrid")
+    choice = st.session_state.get("map_style_choice", " Google Maps Satellite Hybrid")
     st_folium(
         _reference_points_map(shown.dropna(subset=["lat", "lon"]), choice, color, kind),
         use_container_width=True,
@@ -1266,7 +1285,7 @@ def _render_reference_page(title: str, df: pd.DataFrame, kind: str, color: str, 
 
 def _render_route_planner(state: dict) -> None:
     """Origin/destination search that calls Agent 1 get_route() and reuses add_route_layers."""
-    st.markdown('<div class="section-heading">🧭 Route Planner</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-heading"> Route Planner</div>', unsafe_allow_html=True)
     st.caption("Select two Gulf Coast ports, then compute an A* route with the same Agent 1 path used on the Live Map.")
 
     ports = _ports_ref()
@@ -1314,7 +1333,7 @@ def _render_route_planner(state: dict) -> None:
     origin = coords.get(origin_name)
     dest = coords.get(dest_name)
 
-    choice = st.session_state.get("map_style_choice", "🛰️ Google Maps Satellite Hybrid")
+    choice = st.session_state.get("map_style_choice", " Google Maps Satellite Hybrid")
     fmap = _new_gulf_map(choice)
     add_route_layers(
         fmap,
@@ -1338,7 +1357,7 @@ def _render_route_planner(state: dict) -> None:
     st_folium(fmap, use_container_width=True, height=480, key="planner_map")
 
 if not st.session_state.initialised:
-    with st.spinner("🌊 Initialising MaritimeMAS Engine — fetching Open-Meteo & NOAA data..."):
+    with st.spinner(" Initialising MaritimeMAS Engine — fetching Open-Meteo & NOAA data..."):
         orchestrator.initialise()
     st.session_state.initialised = True
 
@@ -1356,14 +1375,14 @@ state = orchestrator.get_state()
 with st.sidebar:
     analyst_slot = st.container()
 
-    st.markdown('<div class="section-heading">🎛️ Simulation Controls</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-heading"> Simulation Controls</div>', unsafe_allow_html=True)
 
     col_play1, col_play2 = st.columns(2)
     with col_play1:
-        tick_click = st.button("⏭️ Next Tick", width="stretch", on_click=_request_live_tick)
+        tick_click = st.button(" Next Tick", width="stretch", on_click=_request_live_tick)
     with col_play2:
         play_click = st.button(
-            "⏸️ Pause" if st.session_state.auto_play else "▶️ Auto-Play",
+            " Pause" if st.session_state.auto_play else " Auto-Play",
             type="primary" if st.session_state.auto_play else "secondary",
             width='stretch',
         )
@@ -1373,7 +1392,7 @@ with st.sidebar:
 
     st.session_state.playback_speed = st.slider("Playback speed (sec / tick)", 1, 6, 2)
     if st.session_state.auto_play:
-        st.caption("🟢 Auto-play running — the simulation advances automatically.")
+        st.caption(" Auto-play running — the simulation advances automatically.")
 
     st.caption("Detection thresholds (Dark Vessel Agent rule)")
     if "gap_threshold_min" not in st.session_state:
@@ -1397,11 +1416,11 @@ with st.sidebar:
     orchestrator.set_detection_thresholds(float(gap_slider), float(dr_slider))
 
     st.markdown("<br/>", unsafe_allow_html=True)
-    st.markdown('<div class="section-heading">🌀 Special Demo Modes</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-heading"> Special Demo Modes</div>', unsafe_allow_html=True)
 
     storm_active = state.get("storm_mode_active", False)
     if st.button(
-        "🌩️ Disable Storm Replay" if storm_active else "🌀 Replay Hurricane Ida (Cat 4)",
+        " Disable Storm Replay" if storm_active else " Replay Hurricane Ida (Cat 4)",
         type="primary" if not storm_active else "secondary",
         width='stretch',
         help="Replays NOAA HURDAT2 historical track data for Hurricane Ida (Aug 2021).",
@@ -1409,10 +1428,10 @@ with st.sidebar:
         orchestrator.toggle_storm_mode()
         st.rerun()
     if storm_active:
-        st.caption("⚠️ Storm mode active — Agent 1 is dynamically routing around the Cat 4 eye.")
+        st.caption(" Storm mode active — Agent 1 is dynamically routing around the Cat 4 eye.")
 
     if st.button(
-        "🎬 Guided Demo",
+        " Guided Demo",
         width="stretch",
         help="Advances the live simulation until a flagged vessel, a debris assignment, and a reroute are all visible.",
     ):
@@ -1423,14 +1442,14 @@ with st.sidebar:
         if demo.get("ok"):
             st.caption(
                 f"Guided Demo finished in {demo.get('ticks')} tick(s): "
-                "flag ✓ · collector assignment ✓ · reroute ✓"
+                "flag  · collector assignment  · reroute "
             )
         else:
             missing = ", ".join(k for k, v in (demo.get("seen") or {}).items() if not v) or "unknown"
             st.warning(f"Guided Demo timed out after {demo.get('ticks')} ticks. Still missing: {missing}.")
 
     st.markdown("<br/>", unsafe_allow_html=True)
-    st.markdown('<div class="section-heading">📡 Data Authenticity<span class="tag">source map</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-heading"> Data Authenticity<span class="tag">source map</span></div>', unsafe_allow_html=True)
     rows_html = ""
     for k, v in state.get("data_status", {}).items():
         is_real = "REAL" in v.upper()
@@ -1444,26 +1463,26 @@ with st.sidebar:
     st.markdown(rows_html, unsafe_allow_html=True)
 
     st.markdown("<br/>", unsafe_allow_html=True)
-    st.markdown('<div class="section-heading">🧭 Directory</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-heading"> Directory</div>', unsafe_allow_html=True)
     nav = st.radio("Workspace", NAV_OPTIONS, key="nav_view")
 
     if nav == NAV_LIVE:
         st.markdown("<br/>", unsafe_allow_html=True)
-        st.markdown('<div class="section-heading">🗺️ Map & Layers</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-heading"> Map & Layers</div>', unsafe_allow_html=True)
         st.session_state.map_style_choice = st.selectbox(
             "Basemap",
             [
-                "🌊 MarineTraffic Light Nautical",
-                "🛰️ Google Maps Satellite Hybrid",
-                "🛰️ Esri World Imagery (High-Res)",
-                "🌍 OpenStreetMap Marine View",
+                " CartoDB Dark Matter",
+                " Google Maps Satellite Hybrid",
+                " Esri World Imagery (High-Res)",
+                " OpenStreetMap Marine View",
             ],
         )
         st.session_state.show_gfw = st.checkbox("Show Global Fishing Watch zones", value=st.session_state.show_gfw)
         st.session_state.show_before_after = st.checkbox("Show naive vs. optimized route", value=st.session_state.show_before_after)
 
     st.markdown("<br/>", unsafe_allow_html=True)
-    st.markdown('<div class="section-heading">📊 Live Operations Metrics</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-heading"> Live Operations Metrics</div>', unsafe_allow_html=True)
 
     m = state["metrics"]
 
@@ -1471,22 +1490,22 @@ with st.sidebar:
         f"""
         <div class="metric-grid">
           <div class="metric-card">
-            <div class="metric-label">⛽ Fuel Savings</div>
+            <div class="metric-label"> Fuel Savings</div>
             <div class="metric-value">{m['fuel_savings_pct']:.1f}%</div>
             <div class="metric-sub">vs. naive route</div>
           </div>
           <div class="metric-card">
-            <div class="metric-label">🚨 Flagged</div>
+            <div class="metric-label"> Flagged</div>
             <div class="metric-value">{m['vessels_flagged']}</div>
             <div class="metric-sub">P {m['precision']:.0%} · R {m['recall']:.0%}</div>
           </div>
           <div class="metric-card">
-            <div class="metric-label">🗑️ Hotspots</div>
+            <div class="metric-label"> Hotspots</div>
             <div class="metric-value">{m['hotspots_covered']}</div>
             <div class="metric-sub">covered by collectors</div>
           </div>
           <div class="metric-card">
-            <div class="metric-label">🔄 Reroutes</div>
+            <div class="metric-label"> Reroutes</div>
             <div class="metric-value">{m['reroute_count']}</div>
             <div class="metric-sub">cross-agent triggers</div>
           </div>
@@ -1802,7 +1821,7 @@ if nav == NAV_LIVE:
 
         st.caption("No snapshots yet — advance the simulation to build timeline history.")
 
-    tab_v, tab_d, tab_s = st.tabs(["🛳️ Tracked Vessels Table", "🗑️ Debris & Collector Status", "🌩️ Storm & Weather Data"])
+    tab_v, tab_d, tab_s = st.tabs(["🛳️ Tracked Vessels Table", " Debris & Collector Status", " Storm & Weather Data"])
     with tab_v:
         if state["vessel_positions"]:
             vdf = pd.DataFrame(state["vessel_positions"])
@@ -1824,7 +1843,7 @@ if nav == NAV_LIVE:
 
 elif nav == NAV_PORTS:
     _render_reference_page(
-        '⚓ Ports',
+        ' Ports',
         _ports_ref(),
         'port',
         '#38bdf8',

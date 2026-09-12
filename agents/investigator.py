@@ -114,7 +114,7 @@ def _dispatch(name: str, args: dict) -> Any:
 
 
 def llm_configured() -> bool:
-    return bool(os.environ.get("ANTHROPIC_API_KEY"))
+    return False
 
 
 def investigate_vessel(vessel: dict[str, Any], *, use_llm: bool = True) -> dict[str, Any]:
@@ -139,8 +139,7 @@ def investigate_vessel(vessel: dict[str, Any], *, use_llm: bool = True) -> dict[
         summary = (
             f"{vessel.get('vessel_id')} went dark ~{port.get('distance_nm')} nm from {port.get('name')} "
             f"({port.get('state')}). Nearest light: {light.get('name')} "
-            f"({light.get('distance_nm')} nm). Operators tied to that HQ port: {ops}. "
-            f"(Deterministic lookup — set ANTHROPIC_API_KEY and enable LLM briefs for Claude.)"
+            f"({light.get('distance_nm')} nm). Operators tied to that HQ port: {ops}."
         )
         return {"summary": summary, "tool_calls": tool_calls, "model": "local-lookup", "used_llm": False}
 

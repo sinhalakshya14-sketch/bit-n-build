@@ -57,7 +57,7 @@ st.markdown(
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
     html, body, [class*="css"] { font-family: 'Plus Jakarta Sans', sans-serif; }
-    .stApp { background: #000000; color: #DDDDDD; }
+    .stApp { background: #121418; color: #E2E8F0; }
     
     /* Animations */
     @keyframes fadein {
@@ -71,8 +71,8 @@ st.markdown(
 
     /* Header Banner */
     .mas-header {
-        background: #000000;
-        border: 1px solid #333333;
+        background: #1E222A;
+        border: 1px solid #2D3748;
         border-radius: 12px;
         padding: 20px 28px;
         margin-bottom: 20px;
@@ -82,75 +82,77 @@ st.markdown(
         flex-wrap: wrap;
         gap: 10px;
         transition: border-color 0.3s ease;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     }
-    .mas-header:hover { border-color: #555555; }
+    .mas-header:hover { border-color: #4A5568; }
     .mas-title-group { display: flex; align-items: center; gap: 16px; }
     .mas-title-group .mas-icon {
         width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
-        background: #111111;
+        background: #2D3748;
         display: flex; align-items: center; justify-content: center;
         font-size: 1.5rem; 
-        border: 1px solid #333333;
+        border: 1px solid #4A5568;
     }
-    .mas-title-group h1 { color: #FFFFFF; font-size: 1.6rem; font-weight: 800; margin: 0; }
-    .mas-title-group p  { color: #AAAAAA; font-size: 0.85rem; margin: 4px 0 0 0; font-weight: 500; }
+    .mas-title-group h1 { color: #F7FAFC; font-size: 1.6rem; font-weight: 800; margin: 0; }
+    .mas-title-group p  { color: #A0AEC0; font-size: 0.85rem; margin: 4px 0 0 0; font-weight: 500; }
     
     .mas-header-right { display: flex; align-items: center; gap: 12px; }
     .mas-tick-pill {
-        font-weight: 600; font-size: 0.75rem; color: #FFFFFF;
-        background: #111111; border: 1px solid #333333;
+        font-weight: 600; font-size: 0.75rem; color: #F7FAFC;
+        background: #2D3748; border: 1px solid #4A5568;
         padding: 6px 12px; border-radius: 20px;
     }
     
     .pulse-dot {
-        width: 8px; height: 8px; border-radius: 50%; background: #FFFFFF; display: inline-block;
-        margin-right: 6px; box-shadow: 0 0 0 rgba(255,255,255,0.6); animation: pulse 2s infinite;
+        width: 8px; height: 8px; border-radius: 50%; background: #63B3ED; display: inline-block;
+        margin-right: 6px; box-shadow: 0 0 0 rgba(99,179,237,0.6); animation: pulse 2s infinite;
     }
     @keyframes pulse {
-        0%   { box-shadow: 0 0 0 0 rgba(255,255,255,0.4); }
-        70%  { box-shadow: 0 0 0 6px rgba(255,255,255,0); }
-        100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
+        0%   { box-shadow: 0 0 0 0 rgba(99,179,237,0.4); }
+        70%  { box-shadow: 0 0 0 6px rgba(99,179,237,0); }
+        100% { box-shadow: 0 0 0 0 rgba(99,179,237,0); }
     }
 
     /* KPI Strip */
     .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
     .kpi-card {
-        background: #000000;
-        border: 1px solid #333333;
+        background: #1E222A;
+        border: 1px solid #2D3748;
         border-radius: 12px;
         padding: 18px 22px;
         transition: transform 0.3s ease, border-color 0.3s ease;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
-    .kpi-card:hover { transform: translateY(-4px); border-color: #777777; }
-    .kpi-label { color: #AAAAAA; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; display:flex; align-items:center; gap:6px; }
-    .kpi-value { color: #FFFFFF; font-size: 2rem; font-weight: 800; margin-top: 6px; line-height: 1.1; }
-    .kpi-sub { color: #888888; font-size: 0.75rem; margin-top: 4px; font-weight: 500; }
+    .kpi-card:hover { transform: translateY(-4px); border-color: #4A5568; }
+    .kpi-label { color: #A0AEC0; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; display:flex; align-items:center; gap:6px; }
+    .kpi-value { color: #F7FAFC; font-size: 2rem; font-weight: 800; margin-top: 6px; line-height: 1.1; }
+    .kpi-sub { color: #718096; font-size: 0.75rem; margin-top: 4px; font-weight: 500; }
 
     /* Sidebar Metric Cards */
     .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .metric-card {
-        background: #000000;
-        border: 1px solid #333333;
+        background: #1E222A;
+        border: 1px solid #2D3748;
         border-radius: 12px;
         padding: 14px;
         transition: transform 0.3s ease, border-color 0.3s ease;
     }
-    .metric-card:hover { border-color: #666666; transform: translateY(-2px); }
-    .metric-label { color: #AAAAAA; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
-    .metric-value { color: #FFFFFF; font-size: 1.4rem; font-weight: 800; line-height: 1.2; margin-top: 4px; }
-    .metric-sub   { color: #888888; font-size: 0.7rem; margin-top: 4px; line-height: 1.3; font-weight: 500; }
+    .metric-card:hover { border-color: #4A5568; transform: translateY(-2px); }
+    .metric-label { color: #A0AEC0; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+    .metric-value { color: #F7FAFC; font-size: 1.4rem; font-weight: 800; line-height: 1.2; margin-top: 4px; }
+    .metric-sub   { color: #718096; font-size: 0.7rem; margin-top: 4px; line-height: 1.3; font-weight: 500; }
 
     /* Section Headings */
     .section-heading {
         display: flex; align-items: center; gap: 10px;
-        color: #FFFFFF; font-size: 1.1rem; font-weight: 800;
+        color: #F7FAFC; font-size: 1.1rem; font-weight: 800;
         margin: 8px 0 14px 0;
         padding-bottom: 10px;
-        border-bottom: 1px solid #333333;
+        border-bottom: 1px solid #2D3748;
     }
     .section-heading .tag {
-        font-size: 0.65rem; font-weight: 700; color: #DDDDDD;
-        background: #222222; padding: 4px 10px; border-radius: 20px;
+        font-size: 0.65rem; font-weight: 700; color: #E2E8F0;
+        background: #4A5568; padding: 4px 10px; border-radius: 20px;
         text-transform: uppercase; letter-spacing: 0.05em;
     }
 
@@ -158,10 +160,10 @@ st.markdown(
     .legend-bar {
         display: flex; gap: 20px; flex-wrap: wrap; align-items: center;
         margin-bottom: 12px; padding: 12px 20px;
-        background: #000000; border: 1px solid #333333;
+        background: #1E222A; border: 1px solid #2D3748;
         border-radius: 12px;
     }
-    .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: #BBBBBB; font-weight: 500; }
+    .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: #CBD5E0; font-weight: 500; }
     .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
     .legend-line { width: 20px; height: 0; display: inline-block; border-top: 3px solid; }
     .legend-line.dashed { border-top-style: dashed; }
@@ -169,47 +171,47 @@ st.markdown(
 
     /* Route Comparison Bar */
     .route-bar {
-        background: #000000; border: 1px solid #333333;
+        background: #1E222A; border: 1px solid #2D3748;
         border-radius: 12px; padding: 16px 22px; margin-top: 12px;
         display: flex; justify-content: space-between; align-items: center;
-        flex-wrap: wrap; gap: 12px; font-size: 0.85rem; color: #CCCCCC;
+        flex-wrap: wrap; gap: 12px; font-size: 0.85rem; color: #CBD5E0;
     }
-    .route-bar b { color: #FFFFFF; font-weight: 700; }
+    .route-bar b { color: #F7FAFC; font-weight: 700; }
 
     /* Explainability Panel */
     .explain-box {
-        background: #000000;
-        border: 1px solid #444444;
-        border-left: 4px solid #FFFFFF;
+        background: #1E222A;
+        border: 1px solid #2D3748;
+        border-left: 4px solid #63B3ED;
         border-radius: 8px;
         padding: 16px 20px;
         margin-bottom: 14px;
         font-size: 0.85rem;
-        color: #DDDDDD;
+        color: #E2E8F0;
     }
-    .explain-metric { font-weight: 700; color: #FFFFFF; }
+    .explain-metric { font-weight: 700; color: #F7FAFC; }
 
     /* Event Feed */
     .event-item {
-        background: #000000;
-        border: 1px solid #333333;
-        border-left: 3px solid #777777;
+        background: #1E222A;
+        border: 1px solid #2D3748;
+        border-left: 3px solid #718096;
         border-radius: 8px;
         padding: 12px 16px;
         margin-bottom: 10px;
         font-size: 0.85rem;
-        color: #CCCCCC;
+        color: #CBD5E0;
         line-height: 1.5;
         display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
         font-weight: 500;
         transition: background 0.3s ease;
     }
-    .event-item:hover { background: #0A0A0A; }
-    .event-item.warn { border-left-color: #AAAAAA; }
-    .event-item.crit { border-left-color: #FFFFFF; }
+    .event-item:hover { background: #2D3748; }
+    .event-item.warn { border-left-color: #ED8936; }
+    .event-item.crit { border-left-color: #E53E3E; }
     .event-count {
-        flex-shrink: 0; font-size: 0.7rem; font-weight: 800; color: #000000;
-        background: #FFFFFF; border-radius: 12px; padding: 2px 8px; white-space: nowrap;
+        flex-shrink: 0; font-size: 0.7rem; font-weight: 800; color: #1A202C;
+        background: #E2E8F0; border-radius: 12px; padding: 2px 8px; white-space: nowrap;
     }
 
     /* Status Badges */
@@ -218,66 +220,66 @@ st.markdown(
         padding: 4px 12px; font-size: 0.7rem; font-weight: 700;
         letter-spacing: 0.05em;
     }
-    .badge-real { background: #111111; color: #FFFFFF; border: 1px solid #444444; }
-    .badge-syn  { background: #222222; color: #DDDDDD; border: 1px solid #555555; }
+    .badge-real { background: #2D3748; color: #63B3ED; border: 1px solid #4A5568; }
+    .badge-syn  { background: #2D3748; color: #F6AD55; border: 1px solid #4A5568; }
 
     /* Data Authenticity Rows */
     .data-row {
         display: flex; align-items: flex-start; gap: 10px;
-        padding: 8px 0; border-bottom: 1px solid #222222;
+        padding: 8px 0; border-bottom: 1px solid #2D3748;
     }
     .data-row:last-child { border-bottom: none; }
-    .data-row-text { font-size: 0.8rem; color: #AAAAAA; line-height: 1.4; font-weight: 500; }
-    .data-row-text b { color: #FFFFFF; font-size: 0.85rem; font-weight: 700; }
+    .data-row-text { font-size: 0.8rem; color: #A0AEC0; line-height: 1.4; font-weight: 500; }
+    .data-row-text b { color: #F7FAFC; font-size: 0.85rem; font-weight: 700; }
 
     /* Overlay sidebar */
     [data-testid="stSidebar"] {
-        background: #000000 !important;
-        border-right: 1px solid #333333;
+        background: #121418 !important;
+        border-right: 1px solid #2D3748;
         z-index: 400;
     }
     [data-testid="stSidebar"] * {
-        color: #DDDDDD !important;
+        color: #E2E8F0 !important;
     }
     [data-testid="stSidebar"] label,
     [data-testid="stSidebar"] p,
     [data-testid="stSidebar"] span,
     [data-testid="stSidebar"] .stMarkdown {
-        color: #DDDDDD !important;
+        color: #E2E8F0 !important;
         opacity: 1 !important;
     }
     [data-testid="stSidebar"] .stButton button {
         border-radius: 8px; font-weight: 700; font-size: 0.85rem;
-        background: #000000;
-        color: #FFFFFF !important;
-        border: 1px solid #555555;
+        background: #2D3748;
+        color: #F7FAFC !important;
+        border: 1px solid #4A5568;
         transition: all 0.2s ease;
     }
     [data-testid="stSidebar"] .stButton button:hover {
-        border-color: #FFFFFF; background: #111111;
+        border-color: #718096; background: #4A5568;
     }
     div[data-testid="stAppViewContainer"] > section.main {
         margin-left: 0 !important;
     }
     [data-testid="stBottom"] {
-        background: #000000;
-        border-top: 1px solid #333333;
-        color: #888888;
+        background: #121418;
+        border-top: 1px solid #2D3748;
+        color: #718096;
         font-size: 0.8rem;
         font-weight: 500;
     }
 
     /* Streamlit overrides for inputs and expanders */
     .stTextInput input {
-        border-radius: 8px; border: 1px solid #444444; background: #000000; color: #FFFFFF; font-weight: 500;
+        border-radius: 8px; border: 1px solid #4A5568; background: #1E222A; color: #F7FAFC; font-weight: 500;
     }
-    .stTextInput input:focus { border-color: #FFFFFF; box-shadow: 0 0 0 1px #FFFFFF; }
-    .stExpander { border: 1px solid #333333; border-radius: 12px; background: #000000; }
-    .stExpander summary { color: #FFFFFF !important; font-weight: 700; }
+    .stTextInput input:focus { border-color: #63B3ED; box-shadow: 0 0 0 1px #63B3ED; }
+    .stExpander { border: 1px solid #2D3748; border-radius: 12px; background: #1E222A; }
+    .stExpander summary { color: #F7FAFC !important; font-weight: 700; }
 
     /* Footer */
     .mas-footer {
-        text-align: center; color: #666666; font-size: 0.75rem; padding: 20px 0 10px 0; font-weight: 500;
+        text-align: center; color: #718096; font-size: 0.75rem; padding: 20px 0 10px 0; font-weight: 500;
     }
     </style>
     """,
@@ -302,7 +304,7 @@ if "initialised" not in st.session_state:
     st.session_state.playback_speed = 3
     st.session_state.show_gfw = True
     st.session_state.show_before_after = True
-    st.session_state.map_style_choice = " CartoDB Dark Matter"
+    st.session_state.map_style_choice = " MarineTraffic Light Nautical"
     st.session_state.planner_route = None
     st.session_state.planner_baseline = None
     st.session_state.planner_labels = None
@@ -351,10 +353,11 @@ def _apply_basemap(folium_map, choice: str) -> None:
             overlay=False,
             control=True,
         ).add_to(folium_map)
-    elif "CartoDB" in choice:
+    elif "MarineTraffic" in choice:
         folium.TileLayer(
-            tiles="cartodbdark_matter",
-            name="CartoDB Dark Matter",
+            tiles="https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?api_key=cb1_3ilh_1_caaf9d8d31347838f3b9faf3&v=2",
+            attr="Carto Voyager MarineTraffic",
+            name="MarineTraffic Light Nautical",
             overlay=False,
             control=True,
         ).add_to(folium_map)
@@ -1472,7 +1475,7 @@ with st.sidebar:
         st.session_state.map_style_choice = st.selectbox(
             "Basemap",
             [
-                " CartoDB Dark Matter",
+                " MarineTraffic Light Nautical",
                 " Google Maps Satellite Hybrid",
                 " Esri World Imagery (High-Res)",
                 " OpenStreetMap Marine View",

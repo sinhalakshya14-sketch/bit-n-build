@@ -49,9 +49,9 @@ from data.reference import load_companies, load_lighthouses, load_ports
 # ─────────────────────────────────────────────────────────────────────────── #
 st.set_page_config(
     page_title="MaritimeMAS — Global Operations",
-    page_icon="",
+    page_icon="🚢",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 # ─────────────────────────────────────────────────────────────────────────── #
@@ -258,11 +258,10 @@ st.markdown(
     .data-row-text { font-size: 0.72rem; color: #94a3b8; line-height: 1.35; }
     .data-row-text b { color: #cbd5e1; font-size: 0.76rem; }
 
-    /* Overlay sidebar: does not shrink the map. Collapsed by default; hover/click expands. */
+    /* Sidebar Styling: Clean docked maritime theme */
     [data-testid="stSidebar"] {
         background: linear-gradient(180deg, #0b1220 0%, #101a30 100%) !important;
         border-right: 1px solid rgba(56, 189, 248, 0.35);
-        z-index: 400;
     }
     [data-testid="stSidebar"] * {
         color: #e2e8f0 !important;
@@ -277,9 +276,6 @@ st.markdown(
     [data-testid="stSidebar"] .stButton button {
         border-radius: 8px; font-weight: 600; font-size: 0.82rem;
         color: #f8fafc !important;
-    }
-    div[data-testid="stAppViewContainer"] > section.main {
-        margin-left: 0 !important;
     }
     [data-testid="stBottom"] {
         background: rgba(8, 14, 28, 0.92);

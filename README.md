@@ -1,4 +1,4 @@
-# Maritime Autonomous Multi-Agent System (GulfMAS)
+# Maritime Autonomous Multi-Agent System 
 
 A 24-hour hackathon MVP of a coordinated multi-agent maritime system for the **Gulf of Mexico / US Gulf Coast** region.
 

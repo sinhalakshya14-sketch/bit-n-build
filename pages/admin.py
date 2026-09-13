@@ -24,7 +24,7 @@ st.set_page_config(
     page_title="MaritimeMAS Admin",
     page_icon="⚙️",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 # ─── Dark theme CSS to match main dashboard ───
@@ -35,6 +35,24 @@ st.markdown(
     html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
     .stApp { background: #060a12; color: #e2e8f0; }
     .block-container { padding-top: 1.2rem !important; max-width: 100% !important; }
+    
+    [data-testid="stSidebar"],
+    section[data-testid="stSidebar"],
+    section[data-testid="stSidebar"][aria-expanded="false"] {
+        background: linear-gradient(180deg, #0b1220 0%, #101a30 100%) !important;
+        border-right: 1px solid rgba(56, 189, 248, 0.35) !important;
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        transform: none !important;
+        margin-left: 0 !important;
+        min-width: 330px !important;
+        max-width: 360px !important;
+        width: 340px !important;
+    }
+    button[data-testid="stSidebarCollapseButton"] {
+        display: none !important;
+    }
     [data-testid="stToolbar"],
     [data-testid="stToolbarActions"],
     header[data-testid="stHeader"] [data-testid="stToolbar"],
@@ -75,6 +93,13 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+with st.sidebar:
+    st.markdown('<div style="font-size:1.05rem;font-weight:700;color:#38bdf8;margin-bottom:8px;">⚙️ Admin Navigation</div>', unsafe_allow_html=True)
+    st.page_link("dashboard.py", label="Live Operations Dashboard", icon="🚢")
+    st.page_link("pages/admin.py", label="Admin Watchlist Viewer", icon="⚙️")
+    st.markdown("---")
+    st.caption("🔒 Password-gated admin portal. Real names are anonymized.")
 
 # ─── Admin Banner ───
 st.markdown(

@@ -47,7 +47,15 @@ st.markdown(
     .viewerBadge_container__1QSob,
     .viewerBadge_link__1S137,
     [data-testid="manage-app-button"],
-    #manage-app-button {
+    #manage-app-button,
+    button[kind="manageApp"],
+    button[title*="Manage app" i],
+    button[aria-label*="Manage app" i],
+    div[class*="viewerBadge"],
+    div[class*="manageApp"],
+    div[class*="manage-app"],
+    .leaflet-bottom.leaflet-right,
+    .leaflet-control-attribution {
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;

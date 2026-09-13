@@ -68,7 +68,7 @@ st.markdown(
     /* Give the custom header room to breathe below Streamlit's own top bar */
     .block-container { padding-top: 0.6rem !important; padding-bottom: 0.4rem; max-width: 100% !important; padding-left: 0.6rem; padding-right: 0.6rem; }
     
-    /* ── Hide Streamlit Cloud Header Options (Share, Star, Edit, GitHub, Deploy) ── */
+    /* ── Hide Streamlit Cloud Header Options (Share, Star, Edit, GitHub, Deploy, Manage App) ── */
     [data-testid="stToolbar"],
     [data-testid="stToolbarActions"],
     header[data-testid="stHeader"] [data-testid="stToolbar"],
@@ -81,7 +81,15 @@ st.markdown(
     .viewerBadge_container__1QSob,
     .viewerBadge_link__1S137,
     [data-testid="manage-app-button"],
-    #manage-app-button {
+    #manage-app-button,
+    button[kind="manageApp"],
+    button[title*="Manage app" i],
+    button[aria-label*="Manage app" i],
+    div[class*="viewerBadge"],
+    div[class*="manageApp"],
+    div[class*="manage-app"],
+    .leaflet-bottom.leaflet-right,
+    .leaflet-control-attribution {
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;

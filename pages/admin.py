@@ -6,8 +6,11 @@ across all codenames. No edit/delete controls.
 
 Access: Set MARITIMEMAS_ADMIN_TOKEN in .env to enable.
 """
-from dotenv import load_dotenv
-load_dotenv(override=True)
+try:
+    from dotenv import load_dotenv
+    load_dotenv(override=True)
+except ImportError:
+    pass
 
 import os
 import sys
@@ -32,7 +35,34 @@ st.markdown(
     html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
     .stApp { background: #060a12; color: #e2e8f0; }
     .block-container { padding-top: 1.2rem !important; max-width: 100% !important; }
-    #MainMenu, footer { visibility: hidden; }
+    [data-testid="stToolbar"],
+    [data-testid="stToolbarActions"],
+    header[data-testid="stHeader"] [data-testid="stToolbar"],
+    header[data-testid="stHeader"] [data-testid="stToolbarActions"],
+    .stAppDeployButton,
+    #MainMenu,
+    footer,
+    [data-testid="stStatusWidget"],
+    [data-testid="stDecoration"],
+    .viewerBadge_container__1QSob,
+    .viewerBadge_link__1S137,
+    [data-testid="manage-app-button"],
+    #manage-app-button {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        width: 0 !important;
+        height: 0 !important;
+        pointer-events: none !important;
+    }
+    header[data-testid="stHeader"] {
+        background: transparent !important;
+    }
+    [data-testid="stSidebarCollapsedControl"] {
+        display: block !important;
+        visibility: visible !important;
+        z-index: 999999 !important;
+    }
     </style>
     """,
     unsafe_allow_html=True,

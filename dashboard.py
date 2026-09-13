@@ -18,8 +18,11 @@ Features:
 Run:
   python -m streamlit run dashboard.py
 """
-from dotenv import load_dotenv
-load_dotenv(override=True)
+try:
+    from dotenv import load_dotenv
+    load_dotenv(override=True)
+except ImportError:
+    pass
 
 import time
 import sys
@@ -62,10 +65,38 @@ st.markdown(
     html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
     .stApp { background: #060a12; color: #e2e8f0; }
 
-    /* Give the custom header room to breathe below Streamlit's own top bar
-       so it never collides with the "Connecting…/Deploy" toolbar. */
+    /* Give the custom header room to breathe below Streamlit's own top bar */
     .block-container { padding-top: 0.6rem !important; padding-bottom: 0.4rem; max-width: 100% !important; padding-left: 0.6rem; padding-right: 0.6rem; }
-    #MainMenu, footer { visibility: hidden; }
+    
+    /* ── Hide Streamlit Cloud Header Options (Share, Star, Edit, GitHub, Deploy) ── */
+    [data-testid="stToolbar"],
+    [data-testid="stToolbarActions"],
+    header[data-testid="stHeader"] [data-testid="stToolbar"],
+    header[data-testid="stHeader"] [data-testid="stToolbarActions"],
+    .stAppDeployButton,
+    #MainMenu,
+    footer,
+    [data-testid="stStatusWidget"],
+    [data-testid="stDecoration"],
+    .viewerBadge_container__1QSob,
+    .viewerBadge_link__1S137,
+    [data-testid="manage-app-button"],
+    #manage-app-button {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        width: 0 !important;
+        height: 0 !important;
+        pointer-events: none !important;
+    }
+    header[data-testid="stHeader"] {
+        background: transparent !important;
+    }
+    [data-testid="stSidebarCollapsedControl"] {
+        display: block !important;
+        visibility: visible !important;
+        z-index: 999999 !important;
+    }
 
     h1, h2, h3, h4 { letter-spacing: -0.01em; }
     hr { border-color: rgba(148, 163, 184, 0.12); margin: 1.4rem 0; }

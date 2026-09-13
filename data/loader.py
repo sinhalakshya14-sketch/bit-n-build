@@ -8,14 +8,14 @@ Integrates:
   2. NOAA HURDAT2 Hurricane Ida (Aug 26-29, 2021) — real storm track data passing through Gulf bounding box (REAL historical data).
   3. Global Fishing Watch (GFW) — active fishing effort polygons / EEZ zones in Gulf shelf (REAL spatial reference data).
   4. Multi-day AIS vessel tracks (~2000 vessels on global shipping lanes) (SYNTHETIC fallback matching NOAA Marine Cadastre schema).
-  5. NOAA Marine Debris Program survey seed points (SYNTHETIC coastal debris data).
+  5. NOAA Marine Debris Program (MDMAP) & Convergence Gyres (REAL survey & zone data).
 
 DATA STATUS (runtime-populated):
   AIS            -> SYNTHETIC (Multi-day, ~2000 vessels, global lanes)
   WEATHER        -> REAL (Open-Meteo Marine API with grid interpolation)
   STORM_TRACK    -> REAL HISTORICAL (NOAA HURDAT2: Hurricane Ida, Aug 2021)
   FISHING_ZONES  -> REAL SPATIAL (Global Fishing Watch Gulf EEZ & Delta Shelf)
-  DEBRIS         -> SYNTHETIC (NOAA Survey Schema, 25 coastal seed points)
+  DEBRIS         -> REAL (NOAA NCEI & Ocean Debris Convergence Zones)
 """
 
 import time
